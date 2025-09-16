@@ -22,6 +22,7 @@ type Options struct {
 	HTMLOut      string
 
 	ShowVersion bool
+	DupPolicy   string
 }
 
 func printUsage() {
@@ -68,6 +69,10 @@ func Parse() Options {
 	if o.ShowVersion {
 		return o
 	}
+
+	// 4k/1080p duplicates are common, so ignore them by default.
+	flag.StringVar(&o.DupPolicy, "dup-policy", "ignore-4k-1080",
+		"Duplicate policy: 'ignore-4k-1080' (default) or 'plex' (count any multi-version)")
 
 	// Require URL + token otherwise.
 	if o.BaseURL == "" || o.Token == "" {

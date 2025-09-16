@@ -53,15 +53,18 @@ type Summary struct {
 	TotalLibraries        int              `json:"total_libraries"`
 	TotalDuplicateItems   int              `json:"total_duplicate_items"`
 	TotalGhostParts       int              `json:"total_ghost_parts"`
+	DuplicatePolicy       string           `json:"duplicate_policy"`
+	VariantItemsExcluded  int              `json:"variant_items_excluded,omitempty"`
 	Libraries             []LibrarySummary `json:"libraries"`
 }
 
 type LibrarySummary struct {
-	SectionID       string `json:"section_id"`
-	SectionTitle    string `json:"section_title"`
-	Type            string `json:"type"`
-	DuplicateItems  int    `json:"duplicate_items"`
-	TotalVersions   int    `json:"total_versions"`
-	GhostParts      int    `json:"ghost_parts"`
-	ItemsWithGhosts int    `json:"items_with_ghosts"`
+	SectionID        string `json:"section_id"`
+	SectionTitle     string `json:"section_title"`
+	Type             string `json:"type"`
+	DuplicateItems   int    `json:"duplicate_items"`
+	TotalVersions    int    `json:"total_versions"`
+	GhostParts       int    `json:"ghost_parts"`
+	ItemsWithGhosts  int    `json:"items_with_ghosts"`
+	VariantsExcluded int    `json:"variants_excluded,omitempty"`
 }

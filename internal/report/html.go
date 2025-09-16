@@ -11,6 +11,7 @@ import (
 	"goduper/internal/util"
 )
 
+// RenderHTML writes a standalone HTML report (no external assets).
 func RenderHTML(out model.Output, verify bool, filename string) error {
 	type pageData struct {
 		Out       model.Output
@@ -45,10 +46,19 @@ func RenderHTML(out model.Output, verify bool, filename string) error {
 		},
 		"safeID": func(s string) string {
 			s = strings.ToLower(s)
-			s = strings.ReplaceAll(s, " ", "-")
-			s = strings.ReplaceAll(s, "/", "-")
-			s = strings.ReplaceAll(s, ".", "-")
+			repl := []string{" ", "-", "/", "-", "\\", "-", ".", "-", ":", "-", "#", "-", "?", "-", "&", "-"}
+			for i := 0; i+1 < len(repl); i += 2 {
+				s = strings.ReplaceAll(s, repl[i], repl[i+1])
+			}
 			return s
+		},
+		"policyName": func(s string) string {
+			switch strings.ToLower(strings.TrimSpace(s)) {
+			case "ignore-4k-1080":
+				return "Policy: Ignore 4K+1080 pair"
+			default:
+				return "Policy: Plex (all multi-version)"
+			}
 		},
 	}
 
@@ -56,40 +66,67 @@ func RenderHTML(out model.Output, verify bool, filename string) error {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>PLEX Server Super Duper Report</title>
+<title>goDuper Report</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 :root {
   --bg:#0f172a;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#38bdf8;
   --ok:#10b981;--warn:#f59e0b;--bad:#ef4444;--chip:#1f2937;--border:#1f2937;
 }
-*{box-sizing:border-box}body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica,Arial,Apple Color Emoji,Segoe UI Emoji;background:var(--bg);color:var(--text)}
+*{box-sizing:border-box}
+body{margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,Helvetica,Arial,Apple Color Emoji,Segoe UI Emoji;background:var(--bg);color:var(--text)}
 .container{max-width:1200px;margin:0 auto;padding:24px}
-h1{font-size:28px;margin:0 0 8px}h2{font-size:22px;margin-top:32px}h3{font-size:18px;margin:18px 0 8px}
+h1{font-size:28px;margin:0 0 8px}
+h2{font-size:22px;margin-top:32px}
+h3{font-size:18px;margin:18px 0 8px}
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
-.grid{display:grid;gap:12px}.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
-.kv{display:grid;grid-template-columns:1fr auto;gap:6px}.muted{color:var(--muted)}
-.chips{display:flex;flex-wrap:wrap;gap:8px}.chip{padding:2px 8px;background:var(--chip);border:1px solid var(--border);border-radius:999px;font-size:12px}
-.chip.ok{border-color:var(--ok);color:#d1fae5}.chip.bad{border-color:var(--bad);color:#fee2e2}.chip.warn{border-color:var(--warn);color:#fff7ed}
-a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
-table{width:100%;border-collapse:collapse;margin-top:8px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.kv{display:grid;grid-template-columns:1fr auto;gap:6px}
+.muted{color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:2px 8px;background:var(--chip);border:1px solid var(--border);border-radius:999px;font-size:12px}
+.chip.ok{border-color:var(--ok);color:#d1fae5}
+.chip.bad{border-color:var(--bad);color:#fee2e2}
+.chip.warn{border-color:var(--warn);color:#fff7ed}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:top}
 code{background:#0b1220;padding:2px 4px;border-radius:6px}
 .summary-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
 .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px}
-.card h3{margin:0 0 6px;font-size:16px}.small{font-size:12px}.details{margin-top:12px}
-details{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:#0b1325}details+details{margin-top:8px}details summary{cursor:pointer;font-weight:600}
+.card h3{margin:0 0 6px;font-size:16px}
+.small{font-size:12px}
+.details{margin-top:12px}
+details{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:#0b1325}
+details+details{margin-top:8px}
+details summary{cursor:pointer;font-weight:600}
 .badge{font-size:11px;padding:2px 6px;border-radius:8px;background:var(--chip);border:1px solid var(--border);margin-left:6px}
-.badge.ok{border-color:var(--ok);color:#22c55e}.badge.bad{border-color:var(--bad);color:#ef4444}.badge.warn{border-color:var(--warn);color:#f59e0b}
-.toc a{display:inline-block;margin-right:12px;margin-bottom:8px}.footer{margin-top:24px;color:var(--muted);font-size:12px}
+.badge.ok{border-color:var(--ok);color:#22c55e}
+.badge.bad{border-color:var(--bad);color:#ef4444}
+.badge.warn{border-color:var(--warn);color:#f59e0b}
+.toc a{display:inline-block;margin-right:12px;margin-bottom:8px}
+.footer{margin-top:24px;color:var(--muted);font-size:12px}
 hr{border:none;height:1px;background:var(--border);margin:20px 0}
+@media (max-width: 960px) {
+  .summary-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 </style>
 </head>
 <body>
 <div class="container">
   <header>
-    <h1>PLEX Server Super Duper Report</h1>
+    <h1>goDuper Report</h1>
     <div class="muted small">Generated: {{ .Generated }} &nbsp;•&nbsp; Server: <code>{{ .Out.Server }}</code></div>
-    {{ if .Verify }}<div class="chips" style="margin-top:8px"><span class="chip ok">Verification: On (checkFiles)</span></div>{{ else }}<div class="chips" style="margin-top:8px"><span class="chip warn">Verification: Off (ghost counts not checked)</span></div>{{ end }}
+    <div class="chips" style="margin-top:8px">
+      {{ if .Verify }}
+        <span class="chip ok">Verification: On (checkFiles)</span>
+      {{ else }}
+        <span class="chip warn">Verification: Off (ghost counts not checked)</span>
+      {{ end }}
+      <span class="chip">{{ policyName .Out.Summary.DuplicatePolicy }}</span>
+    </div>
   </header>
 
   <section class="panel" style="margin-top:16px">
@@ -99,6 +136,9 @@ hr{border:none;height:1px;background:var(--border);margin:20px 0}
       <div class="card"><h3>Total Libraries</h3><div style="font-size:26px;font-weight:700">{{ comma .Out.Summary.TotalLibraries }}</div></div>
       <div class="card"><h3>Total Versions</h3><div style="font-size:26px;font-weight:700">{{ comma .Out.TotalVersions }}</div></div>
       <div class="card"><h3>Total Ghost Parts</h3><div style="font-size:26px;font-weight:700">{{ comma .Out.Summary.TotalGhostParts }}</div></div>
+      {{ if gt .Out.Summary.VariantItemsExcluded 0 }}
+      <div class="card"><h3>4K+1080 Pairs Ignored</h3><div style="font-size:26px;font-weight:700">{{ comma .Out.Summary.VariantItemsExcluded }}</div></div>
+      {{ end }}
     </div>
 
     <h3 style="margin-top:16px">Per-Library</h3>
@@ -114,6 +154,9 @@ hr{border:none;height:1px;background:var(--border);margin:20px 0}
           <div class="kv"><span>Total versions</span><strong>{{ comma .TotalVersions }}</strong></div>
           <div class="kv"><span>Items with ghosts</span><strong>{{ comma .ItemsWithGhosts }}</strong></div>
           <div class="kv"><span>Ghost parts</span><strong>{{ comma .GhostParts }}</strong></div>
+          {{ if gt .VariantsExcluded 0 }}
+          <div class="kv"><span>4K+1080 pairs ignored</span><strong>{{ comma .VariantsExcluded }}</strong></div>
+          {{ end }}
         </div>
       </div>
       {{ end }}
@@ -125,7 +168,7 @@ hr{border:none;height:1px;background:var(--border);margin:20px 0}
     {{ range $s := .Out.Sections }}
       <h3 style="margin-top:18px">{{ $s.SectionTitle }} <span class="badge">{{ len $s.Items }} items</span></h3>
       {{ if eq (len $s.Items) 0 }}
-        <div class="muted">No duplicates in this library.</div>
+        <div class="muted">No duplicates in this library after applying policy.</div>
       {{ else }}
         {{ range $it := $s.Items }}
         <details>
