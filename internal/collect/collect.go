@@ -54,7 +54,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 	for _, sec := range sections {
 		vids, err := pc.FetchDuplicatesForSection(ctx, sec.Key)
 		if err != nil {
-			// Skip this library if it errors; continue with others
+			// Skip this library on error; continue with others
 			continue
 		}
 
@@ -89,7 +89,6 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 			}
 
 			itemGhosts := 0
-			itemVersions := 0
 
 			for _, m := range vv.Media {
 				ver := model.Version{
@@ -102,7 +101,6 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 					Width:           m.Width,
 					Height:          m.Height,
 				}
-				itemVersions++
 
 				for _, p := range m.Part {
 					exists := p.ExistsInt == 1
@@ -130,7 +128,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 			// Policy: ignore EXACT 4K+1080 pair (and only that case)
 			if shouldExcludeAs4k1080Pair(item, o.DupPolicy) {
 				secVariantsExcluded++
-				ignored = append(ignored, model.IgnoredItem{ // <— NEW
+				ignored = append(ignored, model.IgnoredItem{
 					SectionID:    sec.Key,
 					SectionTitle: sec.Title,
 					Reason:       "4k+1080_pair",
@@ -139,6 +137,8 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 				continue
 			}
 
+			// Count only kept items
+			secTotalVersions += len(item.Versions)
 			if itemGhosts > 0 {
 				secItemsWithGhosts++
 			}
@@ -177,8 +177,8 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 		VariantItemsExcluded:  totalVariantsExcluded,
 		Libraries:             libSummaries,
 	}
-
 	out.Ignored = ignored
+
 	return out, nil
 }
 
@@ -206,9 +206,8 @@ func shouldExcludeAs4k1080Pair(it model.Item, policy string) bool {
 	return total == 2 && counts["2160"] == 1 && counts["1080"] == 1
 }
 
-// Normalize resolution label to a key we can compare ("2160", "1080", "720", "480", "unknown").
-// Prefers Plex's VideoResolution string, then falls back to dimensions.
-// Uses OR thresholds so scope encodes (e.g., 3840x1600) still count as 4K.
+// NOTE: you mentioned adjusting the 4K fallback height to 1580 for scope;
+// make sure your normalizeResKey matches that change in your codebase.
 func normalizeResKey(v model.Version) string {
 	r := strings.ToLower(strings.TrimSpace(v.VideoResolution))
 	switch {
@@ -222,27 +221,19 @@ func normalizeResKey(v model.Version) string {
 		return "480"
 	}
 
-	// Fallback by dimensions (handle rotated/odd metadata)
+	// Fallback by dimensions (long/short side)
 	w, h := v.Width, v.Height
 	if w < h {
-		w, h = h, w // w = longer side, h = shorter side
+		w, h = h, w
 	}
-
-	// Thresholds: tune if needed.
 	const (
-		// 4K if long side >= 3200 OR short side >= 1580 (captures 3840x1600, 4096x1716, etc.)
-		th4kLong  = 3200
-		th4kShort = 1580
-
-		// 1080 if long side >= 1700 OR short side >= 900 (captures 1920x800, 2048x858, etc.)
+		th4kLong    = 3200
+		th4kShort   = 1580 // your CinemaScope-friendly tweak
 		th1080Long  = 1700
 		th1080Short = 900
-
-		// 720 if long side >= 1200 OR short side >= 650
-		th720Long  = 1200
-		th720Short = 650
+		th720Long   = 1200
+		th720Short  = 650
 	)
-
 	switch {
 	case w >= th4kLong || h >= th4kShort:
 		return "2160"
