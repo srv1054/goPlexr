@@ -33,8 +33,9 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 	}
 
 	out := model.Output{
-		Server: pcURL(pc),
+		Server: pc.BaseURL(),
 	}
+
 	totalItems := 0
 	totalVersions := 0
 	totalGhosts := 0
@@ -148,13 +149,4 @@ func fallback[T comparable](a, b T) T {
 		return a
 	}
 	return b
-}
-
-// pull server URL string back out without exporting internals
-func pcURL(pc *plex.Client) string {
-	// reflect base is unexported; easiest is to use fmt.Sprintf on pc and parse,
-	// but that's ugly. Instead, add a tiny exported helper in plex if you prefer.
-	// For now, we’ll just say "(redacted)" if we can’t.
-	// To keep original behavior, uncomment the helper in client.go if you want.
-	return "(server)"
 }

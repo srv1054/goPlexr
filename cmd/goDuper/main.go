@@ -13,8 +13,19 @@ import (
 	"goduper/internal/report"
 )
 
+// Version is the CLI version. Override at build time with:
+//
+//	go build -ldflags "-X main.Version=v0.3.0" ./cmd/goDuper
+var Version = "v0.3.0"
+
 func main() {
-	o := opts.Parse() // exits on missing -url/-token
+	o := opts.Parse()
+
+	if o.ShowVersion {
+		fmt.Println("goDuper", Version)
+		fmt.Println("github.com/srv1054/goDuper")
+		return
+	}
 
 	ctx := context.Background()
 	pc, err := plex.NewClient(o)

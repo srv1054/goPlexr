@@ -198,3 +198,8 @@ func (c *Client) DeepFetchItem(ctx context.Context, ratingKey string, verify boo
 	}
 	return &mc.Video[0], nil
 }
+
+// BaseURL returns the server base URL string exactly as configured.
+func (c *Client) BaseURL() string {
+	return c.base.String()
+}
