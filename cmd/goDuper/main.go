@@ -13,20 +13,24 @@ import (
 	"goduper/internal/report"
 )
 
-// Version is the CLI version. Override at build time with:
-//
-//	go build -ldflags "-X main.Version=v0.3.0" ./cmd/goDuper
-var Version = "v0.6.2"
+/*
+	Version is the CLI version. Override at build time with:
+
+go build -ldflags "-X main.Version=v0.3.0" ./cmd/goDuper
+*/
+var Version = "v0.6.5"
 
 func main() {
 	o := opts.Parse()
 
+	// Show version and exit
 	if o.ShowVersion {
 		fmt.Println("goDuper", Version)
 		fmt.Println("github.com/srv1054/goDuper")
 		return
 	}
 
+	// Basic validation
 	ctx := context.Background()
 	pc, err := plex.NewClient(o)
 	if err != nil {
@@ -34,6 +38,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Collect duplicates
 	out, err := collect.Run(ctx, pc, o)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "FATAL:", err)
@@ -48,6 +53,8 @@ func main() {
 			fmt.Fprintln(os.Stderr, "JSON written to", o.JSONOut)
 		}
 	}
+
+	// JSON to stdout (unless -quiet)
 	if !o.Quiet {
 		enc := json.NewEncoder(os.Stdout)
 		if o.Pretty {
@@ -71,6 +78,7 @@ func main() {
 	_ = model.Output{} // keep import if optimizer gets cute
 }
 
+// writeJSONFile writes the given value as JSON to the specified file path.
 func writeJSONFile(path string, v any, pretty bool) error {
 	f, err := os.Create(path)
 	if err != nil {

@@ -5,6 +5,7 @@ import (
 	"strconv"
 )
 
+// CommaInt formats an integer with commas as thousands separators.
 func CommaInt(n int) string {
 	sign := ""
 	if n < 0 {
@@ -18,6 +19,7 @@ func CommaInt(n int) string {
 	return sign + s
 }
 
+// CommaInt64 formats an int64 with commas as thousands separators.
 func CommaInt64(n int64) string {
 	sign := ""
 	if n < 0 {
@@ -31,6 +33,7 @@ func CommaInt64(n int64) string {
 	return sign + s
 }
 
+// CommaAny formats an integer (int or int64) with commas, or falls back to fmt.Sprint for other types.
 func CommaAny(v any) string {
 	switch t := v.(type) {
 	case int:
@@ -42,6 +45,7 @@ func CommaAny(v any) string {
 	}
 }
 
+// BytesHuman formats a byte count into a human-readable string (e.g., 1.5 GiB).
 func BytesHuman(b int64) string {
 	if b < 1024 {
 		return fmt.Sprintf("%d B", b)

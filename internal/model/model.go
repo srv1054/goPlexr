@@ -11,6 +11,7 @@ type Output struct {
 	Ignored       []IgnoredItem   `json:"ignored,omitempty"`
 }
 
+// Result for a single library/section
 type SectionResult struct {
 	SectionID    string `json:"section_id"`
 	SectionTitle string `json:"section_title"`
@@ -18,6 +19,7 @@ type SectionResult struct {
 	Items        []Item `json:"items"` // duplicate items only
 }
 
+// Item represents a movie or show with its versions
 type Item struct {
 	RatingKey string    `json:"rating_key"`
 	Title     string    `json:"title"`
@@ -26,6 +28,7 @@ type Item struct {
 	Versions  []Version `json:"versions"`
 }
 
+// A specific version of an item (e.g., a 4K or 1080p file)
 type Version struct {
 	ID              string    `json:"id,omitempty"`
 	Container       string    `json:"container,omitempty"`
@@ -38,6 +41,7 @@ type Version struct {
 	Parts           []PartOut `json:"parts,omitempty"`
 }
 
+// A specific part of a version (e.g., a file on disk)
 type PartOut struct {
 	ID             string `json:"id,omitempty"`
 	File           string `json:"file,omitempty"`
@@ -59,6 +63,7 @@ type Summary struct {
 	Libraries             []LibrarySummary `json:"libraries"`
 }
 
+// Summary for a single library/section
 type LibrarySummary struct {
 	SectionID        string `json:"section_id"`
 	SectionTitle     string `json:"section_title"`

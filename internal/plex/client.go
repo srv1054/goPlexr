@@ -71,6 +71,7 @@ type Client struct {
 	timeout time.Duration
 }
 
+// NewClient creates a Plex API client with the given options.
 func NewClient(o opts.Options) (*Client, error) {
 	u, err := url.Parse(o.BaseURL)
 	if err != nil {
@@ -101,6 +102,7 @@ func NewClient(o opts.Options) (*Client, error) {
 	}, nil
 }
 
+// buildURL constructs a full URL with the given path and query parameters, adding the auth token.
 func (c *Client) buildURL(path string, q url.Values) string {
 	u := *c.base
 	u.Path = strings.TrimRight(c.base.Path, "/") + path
@@ -112,6 +114,7 @@ func (c *Client) buildURL(path string, q url.Values) string {
 	return u.String()
 }
 
+// getXML performs a GET request to the given URL and decodes the XML response into a mediaContainer.
 func (c *Client) getXML(ctx context.Context, rawURL string) (*mediaContainer, error) {
 	if c.verbose {
 		fmt.Fprintln(os.Stderr, "GET", rawURL)
@@ -141,6 +144,7 @@ func (c *Client) getXML(ctx context.Context, rawURL string) (*mediaContainer, er
 	return &mc, nil
 }
 
+// shortHost returns a shortened hostname for use in the X-Plex-Client-Identifier header.
 func shortHost() string {
 	h, _ := os.Hostname()
 	if len(h) > 20 {
@@ -165,6 +169,7 @@ func (c *Client) DiscoverSections(ctx context.Context, includeShows bool) ([]Dir
 	return out, nil
 }
 
+// FetchDuplicatesForSection fetches all items in the given section ID and returns those with multiple versions.
 func (c *Client) FetchDuplicatesForSection(ctx context.Context, id string) ([]Video, error) {
 	q := url.Values{}
 	q.Set("duplicate", "1")
@@ -182,6 +187,7 @@ func (c *Client) FetchDuplicatesForSection(ctx context.Context, id string) ([]Vi
 	return vids, nil
 }
 
+// DeepFetchItem fetches full details for a single item by its ratingKey, including media and part info.
 func (c *Client) DeepFetchItem(ctx context.Context, ratingKey string, verify bool) (*Video, error) {
 	q := url.Values{}
 	q.Set("includeChildren", "1")

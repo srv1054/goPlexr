@@ -10,7 +10,7 @@ import (
 )
 
 func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, error) {
-	// --- discover sections ---
+
 	var (
 		sections []plex.Directory
 		err      error
@@ -38,7 +38,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 		}
 	}
 
-	// --- collect + summarize ---
+	// Prepare output
 	out := model.Output{
 		Server: pc.BaseURL(),
 	}
@@ -54,7 +54,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 	for _, sec := range sections {
 		vids, err := pc.FetchDuplicatesForSection(ctx, sec.Key)
 		if err != nil {
-			// Skip this library on error; continue with others
+
 			continue
 		}
 
@@ -70,7 +70,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 		secVariantsExcluded := 0
 
 		for _, v := range vids {
-			// deep fetch for parts + verification flags (if enabled)
+			// Fetch deeply if requested (to get full media/part details)
 			var vv *plex.Video
 			if o.Deep {
 				vv, err = pc.DeepFetchItem(ctx, v.RatingKey, o.Verify)
@@ -125,7 +125,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 				item.Versions = append(item.Versions, ver)
 			}
 
-			// Policy: ignore EXACT 4K+1080 pair (and only that case)
+			// Ignore Exact 4K+1080 pair (and only that case)
 			if shouldExcludeAs4k1080Pair(item, o.DupPolicy) {
 				secVariantsExcluded++
 				ignored = append(ignored, model.IgnoredItem{
@@ -137,7 +137,6 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 				continue
 			}
 
-			// Count only kept items
 			secTotalVersions += len(item.Versions)
 			if itemGhosts > 0 {
 				secItemsWithGhosts++
@@ -192,7 +191,7 @@ func (*noSectionsErr) Error() string { return "no movie/show sections found" }
 // Only exclude when exactly one 4K and one 1080p version exist (no others).
 func shouldExcludeAs4k1080Pair(it model.Item, policy string) bool {
 	if strings.ToLower(policy) != "ignore-4k-1080" {
-		return false // "plex" behavior: keep all multi-version items
+		return false
 	}
 
 	counts := map[string]int{}
@@ -206,8 +205,6 @@ func shouldExcludeAs4k1080Pair(it model.Item, policy string) bool {
 	return total == 2 && counts["2160"] == 1 && counts["1080"] == 1
 }
 
-// NOTE: you mentioned adjusting the 4K fallback height to 1580 for scope;
-// make sure your normalizeResKey matches that change in your codebase.
 func normalizeResKey(v model.Version) string {
 	r := strings.ToLower(strings.TrimSpace(v.VideoResolution))
 	switch {
@@ -221,14 +218,13 @@ func normalizeResKey(v model.Version) string {
 		return "480"
 	}
 
-	// Fallback by dimensions (long/short side)
 	w, h := v.Width, v.Height
 	if w < h {
 		w, h = h, w
 	}
 	const (
 		th4kLong    = 3200
-		th4kShort   = 1580 // your CinemaScope-friendly tweak
+		th4kShort   = 1580
 		th1080Long  = 1700
 		th1080Short = 900
 		th720Long   = 1200
