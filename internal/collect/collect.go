@@ -199,11 +199,13 @@ func shouldExcludeAs4k1080Pair(it model.Item, policy string) bool {
 	return total == 2 && counts["2160"] == 1 && counts["1080"] == 1
 }
 
-// Normalize resolution label to a key we can compare (2160, 1080, 720, 480, unknown).
+// Normalize resolution label to a key we can compare ("2160", "1080", "720", "480", "unknown").
+// Prefers Plex's VideoResolution string, then falls back to dimensions.
+// Uses OR thresholds so scope encodes (e.g., 3840x1600) still count as 4K.
 func normalizeResKey(v model.Version) string {
 	r := strings.ToLower(strings.TrimSpace(v.VideoResolution))
 	switch {
-	case r == "4k" || strings.Contains(r, "2160"):
+	case r == "4k" || strings.Contains(r, "2160") || strings.Contains(r, "uhd"):
 		return "2160"
 	case strings.Contains(r, "1080"):
 		return "1080"
@@ -212,15 +214,36 @@ func normalizeResKey(v model.Version) string {
 	case r == "sd" || strings.Contains(r, "480"):
 		return "480"
 	}
-	// Fallback to height
+
+	// Fallback by dimensions (handle rotated/odd metadata)
+	w, h := v.Width, v.Height
+	if w < h {
+		w, h = h, w // w = longer side, h = shorter side
+	}
+
+	// Thresholds: tune if needed.
+	const (
+		// 4K if long side >= 3200 OR short side >= 1580 (captures 3840x1600, 4096x1716, etc.)
+		th4kLong  = 3200
+		th4kShort = 1580
+
+		// 1080 if long side >= 1700 OR short side >= 900 (captures 1920x800, 2048x858, etc.)
+		th1080Long  = 1700
+		th1080Short = 900
+
+		// 720 if long side >= 1200 OR short side >= 650
+		th720Long  = 1200
+		th720Short = 650
+	)
+
 	switch {
-	case v.Height >= 1580:
+	case w >= th4kLong || h >= th4kShort:
 		return "2160"
-	case v.Height >= 1000:
+	case w >= th1080Long || h >= th1080Short:
 		return "1080"
-	case v.Height >= 700:
+	case w >= th720Long || h >= th720Short:
 		return "720"
-	case v.Height > 0:
+	case h > 0 || w > 0:
 		return "480"
 	default:
 		return "unknown"
