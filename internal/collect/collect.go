@@ -42,6 +42,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 	out := model.Output{
 		Server: pc.BaseURL(),
 	}
+	ignored := make([]model.IgnoredItem, 0)
 
 	totalItems := 0
 	totalVersions := 0
@@ -129,10 +130,15 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 			// Policy: ignore EXACT 4K+1080 pair (and only that case)
 			if shouldExcludeAs4k1080Pair(item, o.DupPolicy) {
 				secVariantsExcluded++
+				ignored = append(ignored, model.IgnoredItem{ // <— NEW
+					SectionID:    sec.Key,
+					SectionTitle: sec.Title,
+					Reason:       "4k+1080_pair",
+					Item:         item,
+				})
 				continue
 			}
 
-			secTotalVersions += itemVersions
 			if itemGhosts > 0 {
 				secItemsWithGhosts++
 			}
@@ -172,6 +178,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 		Libraries:             libSummaries,
 	}
 
+	out.Ignored = ignored
 	return out, nil
 }
 

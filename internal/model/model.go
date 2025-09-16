@@ -8,6 +8,7 @@ type Output struct {
 	TotalVersions int             `json:"total_versions"`
 	TotalGhosts   int             `json:"total_ghost_parts"`
 	Summary       Summary         `json:"summary"`
+	Ignored       []IgnoredItem   `json:"ignored,omitempty"`
 }
 
 type SectionResult struct {
@@ -67,4 +68,12 @@ type LibrarySummary struct {
 	GhostParts       int    `json:"ghost_parts"`
 	ItemsWithGhosts  int    `json:"items_with_ghosts"`
 	VariantsExcluded int    `json:"variants_excluded,omitempty"`
+}
+
+// Optional list of items excluded by policy (e.g., 4K+1080 pairs)
+type IgnoredItem struct {
+	SectionID    string `json:"section_id"`
+	SectionTitle string `json:"section_title"`
+	Reason       string `json:"reason"` // e.g. "4k+1080_pair"
+	Item         Item   `json:"item"`
 }
