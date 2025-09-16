@@ -56,7 +56,7 @@ func RenderHTML(out model.Output, verify bool, filename string) error {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>goDuper Report</title>
+<title>PLEX Server Super Duper Report</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 :root {
@@ -87,7 +87,7 @@ hr{border:none;height:1px;background:var(--border);margin:20px 0}
 <body>
 <div class="container">
   <header>
-    <h1>goDuper Report</h1>
+    <h1>PLEX Server Super Duper Report</h1>
     <div class="muted small">Generated: {{ .Generated }} &nbsp;•&nbsp; Server: <code>{{ .Out.Server }}</code></div>
     {{ if .Verify }}<div class="chips" style="margin-top:8px"><span class="chip ok">Verification: On (checkFiles)</span></div>{{ else }}<div class="chips" style="margin-top:8px"><span class="chip warn">Verification: Off (ghost counts not checked)</span></div>{{ end }}
   </header>
