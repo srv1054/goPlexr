@@ -33,3 +33,6 @@ go.work.sum
 
 output.json
 test.json
+
+# Ignore html generated files
+*.html
