@@ -20,9 +20,10 @@ type Options struct {
 	Timeout      time.Duration
 	Verbose      bool
 	HTMLOut      string
-
-	ShowVersion bool
-	DupPolicy   string
+	Quiet        bool
+	JSONOut      string
+	ShowVersion  bool
+	DupPolicy    string
 }
 
 func printUsage() {
@@ -56,6 +57,7 @@ func Parse() Options {
 	flag.BoolVar(&o.Verbose, "verbose", false, "Verbose logs to stderr")
 	flag.BoolVar(&o.Verbose, "V", false, "Verbose logs to stderr (alias)")
 	flag.StringVar(&o.HTMLOut, "html-out", "", "Write a standalone HTML report to this file (in addition to JSON to stdout)")
+	flag.StringVar(&o.JSONOut, "json-out", "", "Write JSON output to this file (use with -quiet for no stdout)")
 
 	// Version flags
 	flag.BoolVar(&o.ShowVersion, "version", false, "Print version and exit")
@@ -71,8 +73,11 @@ func Parse() Options {
 	}
 
 	// 4k/1080p duplicates are common, so ignore them by default.
-	flag.StringVar(&o.DupPolicy, "dup-policy", "ignore-4k-1080",
-		"Duplicate policy: 'ignore-4k-1080' (default) or 'plex' (count any multi-version)")
+	flag.StringVar(&o.DupPolicy, "dup-policy", "ignore-4k-1080", "Duplicate policy: 'ignore-4k-1080' (default) or 'plex' (count any multi-version)")
+
+	// Quiet
+	flag.BoolVar(&o.Quiet, "quiet", false, "Do not write JSON to stdout; use --html-out and/or --json-out")
+	flag.BoolVar(&o.Quiet, "q", false, "Alias for -quiet")
 
 	// Require URL + token otherwise.
 	if o.BaseURL == "" || o.Token == "" {

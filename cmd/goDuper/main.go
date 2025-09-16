@@ -16,7 +16,7 @@ import (
 // Version is the CLI version. Override at build time with:
 //
 //	go build -ldflags "-X main.Version=v0.3.0" ./cmd/goDuper
-var Version = "v0.5.3"
+var Version = "v0.6.1"
 
 func main() {
 	o := opts.Parse()
@@ -41,13 +41,22 @@ func main() {
 	}
 
 	// JSON to stdout
-	enc := json.NewEncoder(os.Stdout)
-	if o.Pretty {
-		enc.SetIndent("", "  ")
+	if o.JSONOut != "" {
+		if err := writeJSONFile(o.JSONOut, out, o.Pretty); err != nil {
+			fmt.Fprintln(os.Stderr, "WARN: write JSON:", err)
+		} else if o.Verbose {
+			fmt.Fprintln(os.Stderr, "JSON written to", o.JSONOut)
+		}
 	}
-	if err := enc.Encode(out); err != nil {
-		fmt.Fprintln(os.Stderr, "FATAL:", err)
-		os.Exit(1)
+	if !o.Quiet {
+		enc := json.NewEncoder(os.Stdout)
+		if o.Pretty {
+			enc.SetIndent("", "  ")
+		}
+		if err := enc.Encode(out); err != nil {
+			fmt.Fprintln(os.Stderr, "FATAL:", err)
+			os.Exit(1)
+		}
 	}
 
 	// Optional HTML report
@@ -60,4 +69,17 @@ func main() {
 	}
 
 	_ = model.Output{} // keep import if optimizer gets cute
+}
+
+func writeJSONFile(path string, v any, pretty bool) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	enc := json.NewEncoder(f)
+	if pretty {
+		enc.SetIndent("", "  ")
+	}
+	return enc.Encode(v)
 }
