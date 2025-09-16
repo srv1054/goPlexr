@@ -16,7 +16,7 @@ import (
 // Version is the CLI version. Override at build time with:
 //
 //	go build -ldflags "-X main.Version=v0.3.0" ./cmd/goDuper
-var Version = "v0.6.1"
+var Version = "v0.6.2"
 
 func main() {
 	o := opts.Parse()
