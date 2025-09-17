@@ -10,7 +10,7 @@ import (
 /*
 	Ver is the CLI version. Override at build time with:
 
-go build -ldflags "-X main.Version=v0.3.0" ./cmd/goDuper
+go build -ldflags "-X main.Version=v0.3.0" ./cmd/goPlexr
 */
 var Ver = "v0.7.0"
 
@@ -20,7 +20,7 @@ func main() {
 	// Show version and exit
 	if o.ShowVersion {
 		fmt.Println("goDuper", Ver)
-		fmt.Println("github.com/srv1054/goDuper")
+		fmt.Println("github.com/srv1054/goPlexr")
 		return
 	}
 
