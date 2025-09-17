@@ -1,4 +1,4 @@
-package collect
+package main
 
 import (
 	"context"
@@ -6,9 +6,6 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	"goduper/internal/opts"
-	"goduper/internal/plex"
 )
 
 // minimal XML fixtures for endpoints
@@ -67,7 +64,7 @@ func TestCollectRun_WithMockPlex(t *testing.T) {
 	defer ts.Close()
 
 	// create options and client pointing at the test server
-	o := opts.Options{
+	o := Options{
 		BaseURL:      ts.URL,
 		Token:        "fake",
 		Deep:         true,
@@ -77,7 +74,7 @@ func TestCollectRun_WithMockPlex(t *testing.T) {
 		Timeout:      5 * time.Second,
 	}
 
-	pc, err := plex.NewClient(o)
+	pc, err := NewClient(o)
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}

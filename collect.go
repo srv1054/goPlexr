@@ -1,18 +1,14 @@
-package collect
+package main
 
 import (
 	"context"
 	"strings"
-
-	"goduper/internal/model"
-	"goduper/internal/opts"
-	"goduper/internal/plex"
 )
 
-func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, error) {
+func Run(ctx context.Context, pc *Client, o Options) (Output, error) {
 
 	var (
-		sections []plex.Directory
+		sections []Directory
 		err      error
 	)
 
@@ -22,7 +18,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 			if s == "" {
 				continue
 			}
-			sections = append(sections, plex.Directory{
+			sections = append(sections, Directory{
 				Key:   s,
 				Type:  "movie",
 				Title: "(manual " + s + ")",
@@ -31,25 +27,25 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 	} else {
 		sections, err = pc.DiscoverSections(ctx, o.IncludeShows)
 		if err != nil {
-			return model.Output{}, err
+			return Output{}, err
 		}
 		if len(sections) == 0 {
-			return model.Output{}, ErrNoSections
+			return Output{}, ErrNoSections
 		}
 	}
 
 	// Prepare output
-	out := model.Output{
+	out := Output{
 		Server: pc.BaseURL(),
 	}
-	ignored := make([]model.IgnoredItem, 0)
+	ignored := make([]IgnoredItem, 0)
 
 	totalItems := 0
 	totalVersions := 0
 	totalGhosts := 0
 	totalVariantsExcluded := 0
 
-	var libSummaries []model.LibrarySummary
+	var libSummaries []LibrarySummary
 
 	for _, sec := range sections {
 		vids, err := pc.FetchDuplicatesForSection(ctx, sec.Key)
@@ -58,7 +54,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 			continue
 		}
 
-		sectionRes := model.SectionResult{
+		sectionRes := SectionResult{
 			SectionID:    sec.Key,
 			SectionTitle: sec.Title,
 			Type:         sec.Type,
@@ -71,7 +67,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 
 		for _, v := range vids {
 			// Fetch deeply if requested (to get full media/part details)
-			var vv *plex.Video
+			var vv *Video
 			if o.Deep {
 				vv, err = pc.DeepFetchItem(ctx, v.RatingKey, o.Verify)
 				if err != nil {
@@ -81,7 +77,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 				vv = &v
 			}
 
-			item := model.Item{
+			item := Item{
 				RatingKey: vv.RatingKey,
 				Title:     fallback(vv.Title, v.Title),
 				Year:      vv.Year,
@@ -91,7 +87,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 			itemGhosts := 0
 
 			for _, m := range vv.Media {
-				ver := model.Version{
+				ver := Version{
 					ID:              m.ID,
 					Container:       m.Container,
 					VideoCodec:      m.VideoCodec,
@@ -107,7 +103,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 					accessible := p.AccessibleInt == 1
 					verified := exists && accessible
 
-					ver.Parts = append(ver.Parts, model.PartOut{
+					ver.Parts = append(ver.Parts, PartOut{
 						ID:             p.ID,
 						File:           p.File,
 						Size:           p.Size,
@@ -128,7 +124,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 			// Ignore Exact 4K+1080 pair (and only that case)
 			if shouldExcludeAs4k1080Pair(item, o.DupPolicy) {
 				secVariantsExcluded++
-				ignored = append(ignored, model.IgnoredItem{
+				ignored = append(ignored, IgnoredItem{
 					SectionID:    sec.Key,
 					SectionTitle: sec.Title,
 					Reason:       "4k+1080_pair",
@@ -145,7 +141,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 			sectionRes.Items = append(sectionRes.Items, item)
 		}
 
-		libSummaries = append(libSummaries, model.LibrarySummary{
+		libSummaries = append(libSummaries, LibrarySummary{
 			SectionID:        sec.Key,
 			SectionTitle:     sec.Title,
 			Type:             sec.Type,
@@ -167,7 +163,7 @@ func Run(ctx context.Context, pc *plex.Client, o opts.Options) (model.Output, er
 	out.TotalItems = totalItems
 	out.TotalVersions = totalVersions
 	out.TotalGhosts = totalGhosts
-	out.Summary = model.Summary{
+	out.Summary = Summary{
 		VerificationPerformed: o.Verify,
 		TotalLibraries:        len(out.Sections),
 		TotalDuplicateItems:   totalItems,
@@ -189,7 +185,7 @@ type noSectionsErr struct{}
 func (*noSectionsErr) Error() string { return "no movie/show sections found" }
 
 // Only exclude when exactly one 4K and one 1080p version exist (no others).
-func shouldExcludeAs4k1080Pair(it model.Item, policy string) bool {
+func shouldExcludeAs4k1080Pair(it Item, policy string) bool {
 	if strings.ToLower(policy) != "ignore-4k-1080" {
 		return false
 	}
@@ -205,7 +201,7 @@ func shouldExcludeAs4k1080Pair(it model.Item, policy string) bool {
 	return total == 2 && counts["2160"] == 1 && counts["1080"] == 1
 }
 
-func normalizeResKey(v model.Version) string {
+func normalizeResKey(v Version) string {
 	r := strings.ToLower(strings.TrimSpace(v.VideoResolution))
 	switch {
 	case r == "4k" || strings.Contains(r, "2160") || strings.Contains(r, "uhd"):

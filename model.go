@@ -1,4 +1,4 @@
-package model
+package main
 
 // Output (top-level JSON)
 type Output struct {

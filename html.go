@@ -1,4 +1,4 @@
-package report
+package main
 
 import (
 	"html/template"
@@ -6,15 +6,12 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"goduper/internal/model"
-	"goduper/internal/util"
 )
 
 // RenderHTML writes a standalone HTML report (no external assets).
-func RenderHTML(out model.Output, verify bool, filename string) error {
+func RenderHTML(out Output, verify bool, filename string) error {
 	type pageData struct {
-		Out       model.Output
+		Out       Output
 		Verify    bool
 		Generated string
 	}
@@ -25,12 +22,12 @@ func RenderHTML(out model.Output, verify bool, filename string) error {
 	}
 
 	funcs := template.FuncMap{
-		"comma":      func(i any) string { return util.CommaAny(i) },
-		"bytesHuman": util.BytesHuman,
-		"itemVersionCount": func(it model.Item) int {
+		"comma":      func(i any) string { return CommaAny(i) },
+		"bytesHuman": BytesHuman,
+		"itemVersionCount": func(it Item) int {
 			return len(it.Versions)
 		},
-		"itemGhostCount": func(it model.Item, verify bool) int {
+		"itemGhostCount": func(it Item, verify bool) int {
 			if !verify {
 				return 0
 			}

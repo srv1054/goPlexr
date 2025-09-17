@@ -1,4 +1,4 @@
-package opts
+package main
 
 import (
 	"flag"

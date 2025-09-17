@@ -5,41 +5,35 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-
-	"goduper/internal/collect"
-	"goduper/internal/model"
-	"goduper/internal/opts"
-	"goduper/internal/plex"
-	"goduper/internal/report"
 )
 
 /*
-	Version is the CLI version. Override at build time with:
+	Ver is the CLI version. Override at build time with:
 
 go build -ldflags "-X main.Version=v0.3.0" ./cmd/goDuper
 */
-var Version = "v0.6.5"
+var Ver = "v0.7.0"
 
 func main() {
-	o := opts.Parse()
+	o := Parse()
 
 	// Show version and exit
 	if o.ShowVersion {
-		fmt.Println("goDuper", Version)
+		fmt.Println("goDuper", Ver)
 		fmt.Println("github.com/srv1054/goDuper")
 		return
 	}
 
 	// Basic validation
 	ctx := context.Background()
-	pc, err := plex.NewClient(o)
+	pc, err := NewClient(o)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "FATAL:", err)
 		os.Exit(1)
 	}
 
 	// Collect duplicates
-	out, err := collect.Run(ctx, pc, o)
+	out, err := Run(ctx, pc, o)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "FATAL:", err)
 		os.Exit(1)
@@ -68,14 +62,14 @@ func main() {
 
 	// Optional HTML report
 	if o.HTMLOut != "" {
-		if err := report.RenderHTML(out, o.Verify, o.HTMLOut); err != nil {
+		if err := RenderHTML(out, o.Verify, o.HTMLOut); err != nil {
 			fmt.Fprintln(os.Stderr, "WARN:", "write HTML:", err)
 		} else if o.Verbose {
 			fmt.Fprintln(os.Stderr, "HTML report written to", o.HTMLOut)
 		}
 	}
 
-	_ = model.Output{} // keep import if optimizer gets cute
+	_ = Output{} // keep import if optimizer gets cute
 }
 
 // writeJSONFile writes the given value as JSON to the specified file path.

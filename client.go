@@ -1,4 +1,4 @@
-package plex
+package main
 
 import (
 	"context"
@@ -12,8 +12,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"goduper/internal/opts"
 )
 
 // XML models (subset)
@@ -72,7 +70,7 @@ type Client struct {
 }
 
 // NewClient creates a Plex API client with the given options.
-func NewClient(o opts.Options) (*Client, error) {
+func NewClient(o Options) (*Client, error) {
 	u, err := url.Parse(o.BaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse base url: %w", err)
