@@ -153,6 +153,17 @@ Please follow the project's existing code style and run `go vet` / `go test` whe
 
 MIT — do what you want, just don’t blame me if your cat deletes your library. 😸
 
+## Screens 
+
+HTML Output
+<img width="1895" height="2518" alt="html-output-sample" src="https://github.com/user-attachments/assets/f3b4b35a-7290-4191-aa7d-d8f52957e42f" />
+
+JSON Output
+<img width="1895" height="2638" alt="json-output-sample" src="https://github.com/user-attachments/assets/144bf00b-17e2-4ee1-b703-36fc48db312b" />
+
+
+
+
 
 
 
