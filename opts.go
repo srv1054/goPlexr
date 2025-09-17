@@ -27,7 +27,7 @@ type Options struct {
 }
 
 func printUsage() {
-	fmt.Fprintf(os.Stderr, "Usage: goDuper -url http://HOST:32400 -token TOKEN [options]\n")
+	fmt.Fprintf(os.Stderr, "Usage: goPlexr -url http://HOST:32400 -token TOKEN [options]\n")
 	flag.PrintDefaults()
 }
 

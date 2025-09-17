@@ -36,3 +36,6 @@ test.json
 
 # Ignore html generated files
 *.html
+
+goplexr*
+goplexr.exe*

@@ -19,7 +19,7 @@ func main() {
 
 	// Show version and exit
 	if o.ShowVersion {
-		fmt.Println("goDuper", Ver)
+		fmt.Println("goPlexr", Ver)
 		fmt.Println("github.com/srv1054/goPlexr")
 		return
 	}

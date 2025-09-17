@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Wrapper script for goDuper to loop through plex users in the db and execute the dupe report tool
+# Wrapper script for goPlexr to loop through plex users in the db and execute the dupe report tool
 # This is unique to my environment BUT you might find useful to modify for your own awesomeness. YMMV. not a guarantee.
 #   Puts outputted HTML files into ${DEST} variable
-#   Expects ./goduper binary in ${DPATH}
-#   v0.1.2 @srv1054 github.com/srv1054/goDuper/scripts
+#   Expects ./goplexr binary in ${DPATH}
+#   v0.1.2 @srv1054 github.com/srv1054/goPlexr/scripts
 
 set -euo pipefail
 
-DPATH="/opt/goduper"
+DPATH="/opt/goplexr"
 DEST="/web/reports"
 
 mkdir -p "$DEST"
@@ -57,7 +57,7 @@ while IFS=$'\t' read -r alias apikey ip port poll; do
   url="$(build_url "$ip" "$port")"
   out="${DEST}/${alias}.html"
 
-  "${DPATH}/goDuper" \
+  "${DPATH}/goPlexr" \
     -url "$url" \
     -token "$apikey" \
     -deep \

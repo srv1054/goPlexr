@@ -1,7 +1,7 @@
-# goDuper
+# goPlexr
 
 PLEX Super Duper Finder — find duplicate media versions in a Plex server and generates JSON/HTML reports.
-goDuper queries a Plex server for duplicate items (movies or optionally shows), optionally performs a deep fetch to inspect media/part details (file paths, sizes) and can verify whether files exist on disk. It summarizes duplicates per library and emits a machine-friendly JSON structure (console, suppressable, or to file) or a standalone HTML report.
+goPlexr queries a Plex server for duplicate items (movies or optionally shows), optionally performs a deep fetch to inspect media/part details (file paths, sizes) and can verify whether files exist on disk. It summarizes duplicates per library and emits a machine-friendly JSON structure (console, suppressable, or to file) or a standalone HTML report.
 
 ## Features
 - Discover movie libraries (and optionally show libraries) on a Plex server using the plex server API.
@@ -15,25 +15,25 @@ goDuper queries a Plex server for duplicate items (movies or optionally shows), 
 Run a scan and print JSON to stdout:
 
 ```bash
-./goduper -url http://plex-host:32400 -token YOUR_PLEX_TOKEN
+./goplexr -url http://plex-host:32400 -token YOUR_PLEX_TOKEN
 ```
 
 Write JSON to a file and also create an HTML report:
 
 ```bash
-./goduper -url http://plex-host:32400 -token YOUR_PLEX_TOKEN -json-out report.json -html-out report.html
+./goplexr -url http://plex-host:32400 -token YOUR_PLEX_TOKEN -json-out report.json -html-out report.html
 ```
 
 Run without verification (faster, but ghost/missing-file counts will be zero):
 
 ```bash
-./goduper -url http://plex-host:32400 -token YOUR_PLEX_TOKEN -verify=false
+./goplexr -url http://plex-host:32400 -token YOUR_PLEX_TOKEN -verify=false
 ```
 
 Scan only specific library section IDs (skip discovery):
 
 ```bash
-./goduper -url http://plex-host:32400 -token YOUR_PLEX_TOKEN -sections 1,2,3
+./goplexr -url http://plex-host:32400 -token YOUR_PLEX_TOKEN -sections 1,2,3
 ```
 
 ## Building
@@ -43,13 +43,13 @@ This repository is written in Go. Build a static binary (or for your platform) w
 From the repository root:
 
 ```bash
-go build -o goduper ./cmd/goDuper
+go build -o goplexr ./cmd/goPlexr
 ```
 
 Optionally set a version at build time (embedded into the binary):
 
 ```bash
-go build -ldflags "-X main.Version=v0.3.0" -o goduper ./cmd/goDuper
+go build -ldflags "-X main.Version=v0.3.0" -o goplexr ./cmd/goPlexr
 ```
 
 Requirements:
@@ -61,7 +61,7 @@ Requirements:
 Basic usage:
 
 ```text
-goDuper -url http://HOST:32400 -token TOKEN [options]
+goPlexr -url http://HOST:32400 -token TOKEN [options]
 ```
 
 Primary flags (defaults shown where applicable):
@@ -106,7 +106,7 @@ Notes on flags:
 
 ## Output format
 
-goDuper emits a JSON object (to stdout by default) representing the scan. Top-level fields include:
+goPlexr emits a JSON object (to stdout by default) representing the scan. Top-level fields include:
 
 - server: the Plex base URL used.
 - sections: array of `SectionResult` objects; each contains `section_id`, `section_title`, `type`, and `items` (duplicate items only).
@@ -121,7 +121,7 @@ The HTML report (if written with `-html-out`) is a single self-contained file wi
 1. Run a full verification and write both JSON and HTML:
 
 ```bash
-./goduper -url http://plex:32400 -token TOKEN -html-out report.html -json-out report.json
+./goplexr -url http://plex:32400 -token TOKEN -html-out report.html -json-out report.json
 ```
 
 2. Review `report.html` in a browser for an easy human summary.

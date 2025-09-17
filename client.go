@@ -122,9 +122,9 @@ func (c *Client) getXML(ctx context.Context, rawURL string) (*mediaContainer, er
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/xml")
-	req.Header.Set("X-Plex-Product", "goDuper")
+	req.Header.Set("X-Plex-Product", "goPlexr")
 	req.Header.Set("X-Plex-Version", "1.3")
-	req.Header.Set("X-Plex-Client-Identifier", "goDuper-"+shortHost())
+	req.Header.Set("X-Plex-Client-Identifier", "goPlexr-"+shortHost())
 
 	resp, err := c.http.Do(req)
 	if err != nil {
