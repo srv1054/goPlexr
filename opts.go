@@ -12,18 +12,19 @@ type Options struct {
 	BaseURL      string
 	Token        string
 	SectionsCSV  string
+	JSONOut      string
+	HTMLOut      string
+	DupPolicy    string
 	IncludeShows bool
 	Deep         bool
 	Pretty       bool
 	Verify       bool
 	InsecureTLS  bool
-	Timeout      time.Duration
 	Verbose      bool
-	HTMLOut      string
 	Quiet        bool
-	JSONOut      string
 	ShowVersion  bool
-	DupPolicy    string
+	IgnoreExtras bool
+	Timeout      time.Duration
 }
 
 func printUsage() {
@@ -62,6 +63,7 @@ func Parse() Options {
 	flag.BoolVar(&o.ShowVersion, "version", false, "Print version and exit")
 	flag.BoolVar(&o.ShowVersion, "v", false, "Print version and exit (alias)")
 	flag.StringVar(&o.DupPolicy, "dup-policy", "ignore-4k-1080", "Duplicate policy: 'ignore-4k-1080' (default) or 'plex' (count any multi-version)")
+	flag.BoolVar(&o.IgnoreExtras, "ignore-extras", false, "Ignore versions in Extras/Featurettes/Trailers/ or -extra... when determining duplicates")
 
 	// Support --long flags, then parse
 	normalizeDoubleDash()

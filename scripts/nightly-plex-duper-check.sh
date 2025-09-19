@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Wrapper script for goPlexr to loop through plex users in the db and execute the dupe report tool
+# Wrapper script for goPlexr to loop through multiple plex users in the db and execute the dupe report tool for our group
 # This is unique to my environment BUT you might find useful to modify for your own awesomeness. YMMV. not a guarantee.
 #   Puts outputted HTML files into ${DEST} variable
 #   Expects ./goplexr binary in ${DPATH}
@@ -64,7 +64,9 @@ while IFS=$'\t' read -r alias apikey ip port poll; do
     -include-shows \
     -verify \
     -quiet \
-    -html-out "$out"
+    -ignore-extras \
+    -html-out "$out" \
+    -json-out "$ouj"
 
   printf '%s  Completed for "%s" -> %s\n' "$(now)" "$alias" "$out"
 done < <(
