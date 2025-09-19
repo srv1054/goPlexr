@@ -268,15 +268,15 @@ func normalizeResKey(v Version) string {
 // Known Extra folder names (case-insensitive, per path segment)
 // Plex standard:  https://support.plex.tv/articles/local-files-for-trailers-and-extras/
 var extraDirNames = map[string]struct{}{
-	"extras": {}, "featurettes": {}, "interviews": {}, "shorts": {},
+	"extras": {}, "featurettes": {}, "interviews": {}, "shorts": {}, "deleted": {},
 	"deleted scenes": {}, "trailers": {}, "behind the scenes": {}, "other": {}, "scenes": {},
 }
 
 // Allowed Plex standardized tokens for filename suffix (case-insensitive)
 // Plex standard:  https://support.plex.tv/articles/local-files-for-trailers-and-extras/
 var extraTokens = map[string]struct{}{
-	"behindthescenes": {}, "deleted": {}, "featurette": {},
-	"interview": {}, "scene": {}, "short": {}, "trailer": {}, "other": {},
+	"behindthescenes": {}, "deleted": {}, "featurette": {}, "deletedscene": {}, "interviews": {},
+	"interview": {}, "scene": {}, "short": {}, "trailer": {}, "other": {}, "deletedscenes": {},
 }
 
 // isExtraPath returns true if the path is inside an Extras-like folder OR
