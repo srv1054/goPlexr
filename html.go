@@ -9,16 +9,18 @@ import (
 )
 
 // RenderHTML writes a standalone HTML report (no external assets).
-func RenderHTML(out Output, verify bool, IgnoreExtras bool, filename string) error {
+func RenderHTML(out Output, verify bool, ignoreExtras bool, filename string) error {
 	type pageData struct {
-		Out       Output
-		Verify    bool
-		Generated string
+		Out          Output
+		Verify       bool
+		IgnoreExtras bool
+		Generated    string
 	}
 	data := pageData{
-		Out:       out,
-		Verify:    verify,
-		Generated: time.Now().Format("2006-01-02 15:04:05 MST"),
+		Out:          out,
+		Verify:       verify,
+		IgnoreExtras: ignoreExtras,
+		Generated:    time.Now().Format("2006-01-02 15:04:05 MST"),
 	}
 
 	funcs := template.FuncMap{
