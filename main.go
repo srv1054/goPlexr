@@ -12,7 +12,7 @@ import (
 
 go build -ldflags "-X Ver=v0.3.0" ./cmd/goPlexr
 */
-var Ver = "v0.7.0"
+var Ver = "v0.8.0"
 
 func main() {
 	o := Parse()
@@ -62,7 +62,7 @@ func main() {
 
 	// Optional HTML report
 	if o.HTMLOut != "" {
-		if err := RenderHTML(out, o.Verify, o.HTMLOut); err != nil {
+		if err := RenderHTML(out, o.Verify, o.IgnoreExtras, o.HTMLOut); err != nil {
 			fmt.Fprintln(os.Stderr, "WARN:", "write HTML:", err)
 		} else if o.Verbose {
 			fmt.Fprintln(os.Stderr, "HTML report written to", o.HTMLOut)

@@ -6,7 +6,7 @@ import (
 )
 
 func Run(ctx context.Context, pc *Client, o Options) (Output, error) {
-
+	// --- discover sections ---
 	var (
 		sections []Directory
 		err      error
@@ -34,7 +34,7 @@ func Run(ctx context.Context, pc *Client, o Options) (Output, error) {
 		}
 	}
 
-	// Prepare output
+	// --- collect and summarize ---
 	out := Output{
 		Server: pc.BaseURL(),
 	}
@@ -50,7 +50,7 @@ func Run(ctx context.Context, pc *Client, o Options) (Output, error) {
 	for _, sec := range sections {
 		vids, err := pc.FetchDuplicatesForSection(ctx, sec.Key)
 		if err != nil {
-
+			// Skip this library on error; continue with others
 			continue
 		}
 
@@ -66,7 +66,7 @@ func Run(ctx context.Context, pc *Client, o Options) (Output, error) {
 		secVariantsExcluded := 0
 
 		for _, v := range vids {
-			// Fetch deeply if requested (to get full media/part details)
+			// deep fetch for parts and verification flags (if enabled)
 			var vv *Video
 			if o.Deep {
 				vv, err = pc.DeepFetchItem(ctx, v.RatingKey, o.Verify)
@@ -98,7 +98,14 @@ func Run(ctx context.Context, pc *Client, o Options) (Output, error) {
 					Height:          m.Height,
 				}
 
+				// build parts first, and detect if this entire version is in an Extras folder
+				versionGhosts := 0
+				versionIsExtra := false
 				for _, p := range m.Part {
+					if o.IgnoreExtras && isExtraPath(p.File) {
+						versionIsExtra = true
+					}
+
 					exists := p.ExistsInt == 1
 					accessible := p.AccessibleInt == 1
 					verified := exists && accessible
@@ -114,14 +121,26 @@ func Run(ctx context.Context, pc *Client, o Options) (Output, error) {
 					})
 
 					if o.Verify && !verified {
-						itemGhosts++
+						versionGhosts++
 					}
 				}
 
+				// If ignoring extras and this version lives under Extras/Featurettes/... — drop it entirely.
+				if o.IgnoreExtras && versionIsExtra {
+					continue
+				}
+
+				itemGhosts += versionGhosts
 				item.Versions = append(item.Versions, ver)
 			}
 
-			// Ignore Exact 4K+1080 pair (and only that case)
+			// If extras filtering left fewer than 2 versions, it's no longer a duplicate.
+			if len(item.Versions) < 2 {
+				secVariantsExcluded++
+				continue
+			}
+
+			// Ignore EXACT 4K+1080 pair (only that case)
 			if shouldExcludeAs4k1080Pair(item, o.DupPolicy) {
 				secVariantsExcluded++
 				ignored = append(ignored, IgnoredItem{
@@ -133,6 +152,7 @@ func Run(ctx context.Context, pc *Client, o Options) (Output, error) {
 				continue
 			}
 
+			// Count only kept items
 			secTotalVersions += len(item.Versions)
 			if itemGhosts > 0 {
 				secItemsWithGhosts++
@@ -187,7 +207,7 @@ func (*noSectionsErr) Error() string { return "no movie/show sections found" }
 // Only exclude when exactly one 4K and one 1080p version exist (no others).
 func shouldExcludeAs4k1080Pair(it Item, policy string) bool {
 	if strings.ToLower(policy) != "ignore-4k-1080" {
-		return false
+		return false // "plex" behavior: keep all multi-version items
 	}
 
 	counts := map[string]int{}
@@ -201,6 +221,8 @@ func shouldExcludeAs4k1080Pair(it Item, policy string) bool {
 	return total == 2 && counts["2160"] == 1 && counts["1080"] == 1
 }
 
+// Normalize resolution label to a key we can compare.
+// (Make sure this matches 4K short-side tweak of 1580 to account for cinemascope aspect ratios etc)
 func normalizeResKey(v Version) string {
 	r := strings.ToLower(strings.TrimSpace(v.VideoResolution))
 	switch {
@@ -214,6 +236,7 @@ func normalizeResKey(v Version) string {
 		return "480"
 	}
 
+	// Fallback by dimensions (long/short side)
 	w, h := v.Width, v.Height
 	if w < h {
 		w, h = h, w
@@ -238,6 +261,48 @@ func normalizeResKey(v Version) string {
 	default:
 		return "unknown"
 	}
+}
+
+// isExtraPath - look for extra paths to handle
+func isExtraPath(p string) bool {
+	if p == "" {
+		return false
+	}
+	s := strings.ToLower(p)
+	s = strings.ReplaceAll(s, "\\", "/")
+	segments := strings.Split(s, "/")
+	// Directory-based detection
+	extraDirs := map[string]struct{}{
+		"extras": {}, "featurettes": {}, "interviews": {}, "deleted scenes": {},
+		"deleted_scenes": {}, "deleted-scenes": {}, "scenes": {}, "shorts": {},
+		"trailers": {}, "other": {}, "behind the scenes": {}, "bloopers": {}, "outtakes": {},
+	}
+	for _, seg := range segments[:len(segments)-1] {
+		seg = strings.TrimSpace(seg)
+		if seg == "" {
+			continue
+		}
+		if _, ok := extraDirs[seg]; ok {
+			return true
+		}
+	}
+	// Filename hints (light, to avoid many false positives)
+	fn := segments[len(segments)-1]
+	hints := []string{
+		" trailer", "(trailer", " featurette", "(featurette",
+		" behind the scenes", "(behind the scenes",
+		" deleted scene", "(deleted scene",
+		" interview", "(interview",
+		" bloopers", "(bloopers",
+		" outtakes", "(outtakes",
+		" short", "(short",
+	}
+	for _, h := range hints {
+		if strings.Contains(fn, h) {
+			return true
+		}
+	}
+	return false
 }
 
 func fallback[T comparable](a, b T) T {

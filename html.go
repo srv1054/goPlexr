@@ -9,7 +9,7 @@ import (
 )
 
 // RenderHTML writes a standalone HTML report (no external assets).
-func RenderHTML(out Output, verify bool, filename string) error {
+func RenderHTML(out Output, verify bool, IgnoreExtras bool, filename string) error {
 	type pageData struct {
 		Out       Output
 		Verify    bool
@@ -123,6 +123,13 @@ hr{border:none;height:1px;background:var(--border);margin:20px 0}
         <span class="chip warn">Verification: Off (ghost counts not checked)</span>
       {{ end }}
       <span class="chip">{{ policyName .Out.Summary.DuplicatePolicy }}</span>
+     {{ if gt (len .Out.Ignored) -1 }}
+      <span class="chip">{{ if .IgnoreExtras }}Extras: Ignored{{ else }}Extras: Included{{ end }}</span>
+     {{ end }}
+      {{/* Extras flag chip (we don’t have it in Summary, so derive from data):
+            if any section/item exists we can’t tell from JSON alone; simplest is
+            to pass Options.IgnoreExtras into RenderHTML; if you prefer, modify
+            RenderHTML signature to take ignoreExtras bool as a second flag. */}}
     </div>
   </header>
 
