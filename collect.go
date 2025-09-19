@@ -127,9 +127,22 @@ func RunCollection(ctx context.Context, pc *Client, o Options) (Output, error) {
 					}
 				}
 
-				// If ignoring extras and this version lives under Extras/Featurettes/... — drop it entirely.
+				// If ignoring extras and this version lives under Extras/Featurettes store it and skip it
 				if o.IgnoreExtras && versionIsExtra {
-					continue
+					// Record this dropped version as an ignored Extra
+					ignored = append(ignored, IgnoredItem{
+						SectionID:    sec.Key,
+						SectionTitle: sec.Title,
+						Reason:       "extra_version",
+						Item: Item{
+							RatingKey: vv.RatingKey,
+							Title:     fallback(vv.Title, v.Title),
+							Year:      vv.Year,
+							Guid:      vv.Guid,
+							Versions:  []Version{ver},
+						},
+					})
+					continue // skip adding this version to the item
 				}
 
 				itemGhosts += versionGhosts

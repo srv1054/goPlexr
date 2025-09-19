@@ -59,6 +59,24 @@ func RenderHTML(out Output, verify bool, ignoreExtras bool, filename string) err
 				return "Policy: Plex (all multi-version)"
 			}
 		},
+		"filterIgnoredBy": func(items []IgnoredItem, reason string) []IgnoredItem {
+			out := make([]IgnoredItem, 0, len(items))
+			for _, it := range items {
+				if strings.EqualFold(it.Reason, reason) {
+					out = append(out, it)
+				}
+			}
+			return out
+		},
+		"lenIgnoredBy": func(items []IgnoredItem, reason string) int {
+			n := 0
+			for _, it := range items {
+				if strings.EqualFold(it.Reason, reason) {
+					n++
+				}
+			}
+			return n
+		},
 	}
 
 	const tpl = `<!doctype html>
@@ -126,7 +144,7 @@ hr{border:none;height:1px;background:var(--border);margin:20px 0}
       {{ end }}
       <span class="chip">{{ policyName .Out.Summary.DuplicatePolicy }}</span>
      {{ if gt (len .Out.Ignored) -1 }}
-      <span class="chip">{{ if .IgnoreExtras }}Extras: Ignored{{ else }}Extras: Included{{ end }}</span>
+      <span class="chip">Extras ignored: {{ lenIgnoredBy .Out.Ignored "extra_version" }}</span>
      {{ end }}
       {{/* Extras flag chip (we don’t have it in Summary, so derive from data):
             if any section/item exists we can’t tell from JSON alone; simplest is
@@ -247,6 +265,45 @@ hr{border:none;height:1px;background:var(--border);margin:20px 0}
           {{ end }}
         </tbody>
       </table>
+    </details>
+    {{ end }}
+  </section>
+
+  {{ if and .IgnoreExtras (gt (lenIgnoredBy .Out.Ignored "extra_version") 0) }}
+  <section class="details" style="margin-top:22px">
+    <h2>Ignored Extras</h2>
+    <div class="muted small" style="margin-bottom:8px">
+      The versions below were ignored because <strong>--ignore-extras</strong> was enabled and their filename/folder matched Plex’s Extras conventions.
+    </div>
+    {{ $extras := filterIgnoredBy .Out.Ignored "extra_version" }}
+    {{ range $ig := $extras }}
+    <details>
+      <summary>
+        {{ $ig.Item.Title }}{{ if $ig.Item.Year }} ({{ $ig.Item.Year }}){{ end }}
+        <span class="badge">{{ $ig.SectionTitle }}</span>
+        <span class="badge ok">Reason: Extra</span>
+      </summary>
+      <table>
+        <thead><tr><th>Version</th><th>Codec</th><th>Resolution</th><th>Part File</th><th>Size</th><th>Status</th></tr></thead>
+        <tbody>
+          {{ range $v := $ig.Item.Versions }}
+            {{ range $p := $v.Parts }}
+            <tr>
+             <td><code>{{ $v.Container }}</code></td>
+              <td><span class="muted">{{ $v.VideoCodec }}</span> / <span class="muted">{{ $v.AudioCodec }}</span></td>
+              <td>{{ $v.VideoResolution }} ({{ $v.Width }}×{{ $v.Height }})</td>
+              <td><code>{{ $p.File }}</code></td>
+              <td>{{ bytesHuman $p.Size }}</td>
+              <td>
+               {{ if $.Verify }}
+                  {{ if $p.VerifiedOnDisk }}<span class="chip ok">Verified</span>{{ else }}<span class="chip bad">Missing/Unreachable</span>{{ end }}
+                  {{ else }}<span class="chip warn">Not checked</span>{{ end }}
+              </td>
+            </tr>
+            {{ end }}
+          {{ end }}
+        </tbody>
+     </table>
     </details>
     {{ end }}
   </section>
