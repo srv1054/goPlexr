@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"strings"
+	"unicode"
 )
 
-func Run(ctx context.Context, pc *Client, o Options) (Output, error) {
+// Run performs the main collection logic and returns the results.
+func RunCollection(ctx context.Context, pc *Client, o Options) (Output, error) {
 	// --- discover sections ---
 	var (
 		sections []Directory
@@ -263,48 +265,111 @@ func normalizeResKey(v Version) string {
 	}
 }
 
-// isExtraPath - look for extra paths to handle
+// Known Extra folder names (case-insensitive, per path segment)
+// Plex standard:  https://support.plex.tv/articles/local-files-for-trailers-and-extras/
+var extraDirNames = map[string]struct{}{
+	"extras": {}, "featurettes": {}, "interviews": {}, "shorts": {},
+	"deleted scenes": {}, "trailers": {}, "behind the scenes": {}, "other": {}, "scenes": {},
+}
+
+// Allowed Plex standardized tokens for filename suffix (case-insensitive)
+// Plex standard:  https://support.plex.tv/articles/local-files-for-trailers-and-extras/
+var extraTokens = map[string]struct{}{
+	"behindthescenes": {}, "deleted": {}, "featurette": {},
+	"interview": {}, "scene": {}, "short": {}, "trailer": {}, "other": {},
+}
+
+// isExtraPath returns true if the path is inside an Extras-like folder OR
+// the basename ends with a standardized Plex suffix (with/without extension).
 func isExtraPath(p string) bool {
 	if p == "" {
 		return false
 	}
-	s := strings.ToLower(p)
-	s = strings.ReplaceAll(s, "\\", "/")
-	segments := strings.Split(s, "/")
-	// Directory-based detection
-	extraDirs := map[string]struct{}{
-		"extras": {}, "featurettes": {}, "interviews": {}, "deleted scenes": {},
-		"deleted_scenes": {}, "deleted-scenes": {}, "scenes": {}, "shorts": {},
-		"trailers": {}, "other": {}, "behind the scenes": {}, "bloopers": {}, "outtakes": {},
+	// Normalize separators to forward slashes
+	s := strings.ReplaceAll(p, "\\", "/")
+	parts := strings.Split(s, "/")
+	if len(parts) == 0 {
+		return false
 	}
-	for _, seg := range segments[:len(segments)-1] {
-		seg = strings.TrimSpace(seg)
+
+	// Folder-based detection on parent dirs
+	for _, seg := range parts[:len(parts)-1] {
+		seg = strings.TrimSpace(strings.ToLower(seg))
 		if seg == "" {
 			continue
 		}
-		if _, ok := extraDirs[seg]; ok {
+		if _, ok := extraDirNames[seg]; ok {
 			return true
 		}
 	}
-	// Filename hints (light, to avoid many false positives)
-	fn := segments[len(segments)-1]
-	hints := []string{
-		" trailer", "(trailer", " featurette", "(featurette",
-		" behind the scenes", "(behind the scenes",
-		" deleted scene", "(deleted scene",
-		" interview", "(interview",
-		" bloopers", "(bloopers",
-		" outtakes", "(outtakes",
-		" short", "(short",
+
+	// Filename-based detection (hyphen-suffix token), with or without extension
+	base := parts[len(parts)-1] // keep extension; we handle both cases below
+	return isExtraBasename(base)
+}
+
+// isExtraBasename checks only the basename (may include extension).
+// Matches “…-token” or “…-token-<digits>” (also _, ., or space before digits), case-insensitive.
+func isExtraBasename(name string) bool {
+	if name == "" {
+		return false
 	}
-	for _, h := range hints {
-		if strings.Contains(fn, h) {
-			return true
+
+	// Strip extension if present (optional; we accept with or without)
+	if dot := strings.LastIndexByte(name, '.'); dot > 0 {
+		name = name[:dot]
+	}
+
+	name = strings.TrimSpace(name)
+	// Must have a hyphen introducing the token
+	idx := strings.LastIndexByte(name, '-')
+	if idx == -1 || idx == len(name)-1 {
+		return false
+	}
+
+	suffix := strings.ToLower(strings.TrimSpace(name[idx+1:]))
+	if suffix == "" {
+		return false
+	}
+
+	// Exact token match
+	if _, ok := extraTokens[suffix]; ok {
+		return true
+	}
+
+	// Token followed by one separator and digits
+	for tok := range extraTokens {
+		if strings.HasPrefix(suffix, tok) {
+			rest := strings.TrimSpace(suffix[len(tok):])
+			if rest == "" {
+				return true
+			}
+			// one leading separator then digits (e.g., -trailer-2, -trailer_01, -trailer 3, -trailer.4)
+			if len(rest) >= 2 && (rest[0] == '-' || rest[0] == '_' || rest[0] == '.' || rest[0] == ' ') {
+				digits := strings.TrimSpace(rest[1:])
+				if allDigits(digits) {
+					return true
+				}
+			}
 		}
 	}
 	return false
 }
 
+// allDigits returns true if s is non-empty and consists only of digit runes.
+func allDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return true
+}
+
+// fallback returns a if it's not the zero value, otherwise b.
 func fallback[T comparable](a, b T) T {
 	var zero T
 	if a != zero {

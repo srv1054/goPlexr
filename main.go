@@ -12,7 +12,7 @@ import (
 
 go build -ldflags "-X Ver=v0.3.0" ./cmd/goPlexr
 */
-var Ver = "v0.8.0"
+var Ver = "v0.8.2"
 
 func main() {
 	o := Parse()
@@ -33,7 +33,7 @@ func main() {
 	}
 
 	// Collect duplicates
-	out, err := Run(ctx, pc, o)
+	out, err := RunCollection(ctx, pc, o)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "FATAL:", err)
 		os.Exit(1)

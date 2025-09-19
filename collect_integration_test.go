@@ -79,7 +79,7 @@ func TestCollectRun_WithMockPlex(t *testing.T) {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	out, err := Run(context.Background(), pc, o)
+	out, err := RunCollection(context.Background(), pc, o)
 	if err != nil {
 		t.Fatalf("collect.Run error: %v", err)
 	}
