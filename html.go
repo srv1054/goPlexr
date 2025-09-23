@@ -54,7 +54,7 @@ func RenderHTML(out Output, verify bool, ignoreExtras bool, filename string) err
 		"policyName": func(s string) string {
 			switch strings.ToLower(strings.TrimSpace(s)) {
 			case "ignore-4k-1080":
-				return "Policy: Ignore 4K+1080 pair"
+				return "Policy: Ignore 4K+HD pair (1080/720)"
 			default:
 				return "Policy: Plex (all multi-version)"
 			}
@@ -155,7 +155,7 @@ hr{border:none;height:1px;background:var(--border);margin:20px 0}
       <div class="card"><h3>Total Versions</h3><div style="font-size:26px;font-weight:700">{{ comma .Out.TotalVersions }}</div></div>
       <div class="card"><h3>Total Ghost Parts</h3><div style="font-size:26px;font-weight:700">{{ comma .Out.Summary.TotalGhostParts }}</div></div>
       {{ if gt .Out.Summary.VariantItemsExcluded 0 }}
-      <div class="card"><h3>4K+1080 Pairs Ignored</h3><div style="font-size:26px;font-weight:700">{{ comma .Out.Summary.VariantItemsExcluded }}</div></div>
+      <div class="card"><h3>4K+HD Pairs Ignored</h3><div style="font-size:26px;font-weight:700">{{ comma .Out.Summary.VariantItemsExcluded }}</div></div>
       {{ end }}
     </div>
 
@@ -173,7 +173,7 @@ hr{border:none;height:1px;background:var(--border);margin:20px 0}
           <div class="kv"><span>Items with ghosts</span><strong>{{ comma .ItemsWithGhosts }}</strong></div>
           <div class="kv"><span>Ghost parts</span><strong>{{ comma .GhostParts }}</strong></div>
           {{ if gt .VariantsExcluded 0 }}
-          <div class="kv"><span>4K+1080 pairs ignored</span><strong>{{ comma .VariantsExcluded }}</strong></div>
+          <div class="kv"><span>4K+HD Pairs Ignored</span><strong>{{ comma .VariantsExcluded }}</strong></div>
           {{ end }}
         </div>
       </div>
@@ -225,19 +225,19 @@ hr{border:none;height:1px;background:var(--border);margin:20px 0}
     {{ end }}
   </section>
 
-  {{ if gt (len (filterIgnoredBy .Out.Ignored "4k+1080_pair")) 0 }}
+  {{ if gt (len (filterIgnoredBy .Out.Ignored "4k+hd_pair")) 0 }}
   <section class="details" style="margin-top:22px">
-    <h2>Ignored (4K+1080 Pairs)</h2>
+    <h2>Ignored (4K+HD Pairs)</h2>
     <div class="muted small" style="margin-bottom:8px">
-      The items below were not counted as duplicates because they contain exactly one 4K (≈2160p) and one 1080p version, with no other versions.
+     Items with exactly one 4K and one HD (1080/720) version were not counted as duplicates.
     </div>
-    {{ $pairs := filterIgnoredBy .Out.Ignored "4k+1080_pair" }}
+    {{ $pairs := filterIgnoredBy .Out.Ignored "4k+hd_pair" }}
     {{ range $ig := $pairs }}
     <details>
       <summary>
-        {{ $ig.Item.Title }}{{ if $ig.Item.Year }} ({{ $ig.Item.Year }}){{ end }}
-        <span class="badge">{{ $ig.SectionTitle }}</span>
-        <span class="badge ok">Reason: 4K+1080 pair</span>
+       {{ $ig.Item.Title }}{{ if $ig.Item.Year }} ({{ $ig.Item.Year }}){{ end }}
+       <span class="badge">{{ $ig.SectionTitle }}</span>
+       <span class="badge ok">Reason: 4K+HD pair</span>
       </summary>
       <table>
         <thead><tr><th>Version</th><th>Codec</th><th>Resolution</th><th>Part File</th><th>Size</th><th>Status</th></tr></thead>

@@ -155,13 +155,13 @@ func RunCollection(ctx context.Context, pc *Client, o Options) (Output, error) {
 				continue
 			}
 
-			// Ignore EXACT 4K+1080 pair (only that case)
-			if shouldExcludeAs4k1080Pair(item, o.DupPolicy) {
+			// Ignore EXACT 4K+HD pair (only that case)
+			if shouldExcludeAs4kHdPair(item, o.DupPolicy) {
 				secVariantsExcluded++
 				ignored = append(ignored, IgnoredItem{
 					SectionID:    sec.Key,
 					SectionTitle: sec.Title,
-					Reason:       "4k+1080_pair",
+					Reason:       "4k+hd_pair",
 					Item:         item,
 				})
 				continue
@@ -219,21 +219,60 @@ type noSectionsErr struct{}
 
 func (*noSectionsErr) Error() string { return "no movie/show sections found" }
 
-// Only exclude when exactly one 4K and one 1080p version exist (no others).
-func shouldExcludeAs4k1080Pair(it Item, policy string) bool {
+// Exclude when there are exactly two versions and they are:
+// one 4K (2160) + one HD-ish (1080 or 720, including mislabels).
+func shouldExcludeAs4kHdPair(it Item, policy string) bool {
 	if strings.ToLower(policy) != "ignore-4k-1080" {
-		return false // "plex" behavior: keep all multi-version items
+		return false // 'plex' or anything else: keep Plex behavior
+	}
+	if len(it.Versions) != 2 {
+		return false
+	}
+	v1, v2 := it.Versions[0], it.Versions[1]
+	is4k1 := normalizeResKey(v1) == "2160"
+	is4k2 := normalizeResKey(v2) == "2160"
+
+	// One must be 4K, the other must be HD-ish
+	if is4k1 && isHDVersion(v2) {
+		return true
+	}
+	if is4k2 && isHDVersion(v1) {
+		return true
+	}
+	return false
+}
+
+// isHDVersion returns true for 1080/720, including common mislabels.
+// It avoids classifying typical SD (720x480, 720x576) as HD.
+func isHDVersion(v Version) bool {
+	key := normalizeResKey(v)
+	if key == "1080" || key == "720" {
+		return true
 	}
 
-	counts := map[string]int{}
-	total := 0
-	for _, v := range it.Versions {
-		key := normalizeResKey(v)
-		counts[key]++
-		total++
+	// Dimension-based fallback (handles weird labels like "sd (720×388)")
+	w, h := v.Width, v.Height
+	if w < h {
+		w, h = h, w // w = long side
 	}
 
-	return total == 2 && counts["2160"] == 1 && counts["1080"] == 1
+	// Explicitly exclude common SD DVD sizes
+	if (w == 720 && (h == 480 || h == 576)) || (h == 720 && (w == 480 || w == 576)) {
+		return false
+	}
+
+	// Clearly 1080-ish mislabels
+	if w >= 1700 || h >= 1000 {
+		return true
+	}
+
+	// 720-ish: long side >= 700 and short side >= 380
+	// (captures 720×388 / 704×396 scope-y encodes, but not tiny SD)
+	if w >= 700 && h >= 380 {
+		return true
+	}
+
+	return false
 }
 
 // Normalize resolution label to a key we can compare.
