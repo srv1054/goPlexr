@@ -155,13 +155,13 @@ func RunCollection(ctx context.Context, pc *Client, o Options) (Output, error) {
 				continue
 			}
 
-			// Ignore EXACT 4K+1080 pair (only that case)
-			if shouldExcludeAs4k1080Pair(item, o.DupPolicy) {
+			// Ignore EXACT 4K+HD pair (only that case)
+			if shouldExcludeAs4kHdPair(item, o.DupPolicy) {
 				secVariantsExcluded++
 				ignored = append(ignored, IgnoredItem{
 					SectionID:    sec.Key,
 					SectionTitle: sec.Title,
-					Reason:       "4k+1080_pair",
+					Reason:       "4k+hd_pair",
 					Item:         item,
 				})
 				continue
@@ -219,21 +219,24 @@ type noSectionsErr struct{}
 
 func (*noSectionsErr) Error() string { return "no movie/show sections found" }
 
-// Only exclude when exactly one 4K and one 1080p version exist (no others).
-func shouldExcludeAs4k1080Pair(it Item, policy string) bool {
+// Only exclude when there are exactly two versions and they are:
+// one 4K (2160) + one HD (1080 or 720). Policy name kept for compatibility.
+func shouldExcludeAs4kHdPair(it Item, policy string) bool {
 	if strings.ToLower(policy) != "ignore-4k-1080" {
-		return false // "plex" behavior: keep all multi-version items
+		return false // 'plex' or anything else: keep Plex behavior
 	}
-
 	counts := map[string]int{}
 	total := 0
 	for _, v := range it.Versions {
-		key := normalizeResKey(v)
-		counts[key]++
+		k := normalizeResKey(v)
+		counts[k]++
 		total++
 	}
-
-	return total == 2 && counts["2160"] == 1 && counts["1080"] == 1
+	if total != 2 || counts["2160"] != 1 {
+		return false
+	}
+	// Accept 1080 or 720 as the second version (covers mis-labeled 1080->720 cases)
+	return counts["1080"] == 1 || counts["720"] == 1
 }
 
 // Normalize resolution label to a key we can compare.
