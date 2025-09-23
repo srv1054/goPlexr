@@ -12,7 +12,7 @@ import (
 
 go build -ldflags "-X Ver=v0.3.0" ./cmd/goPlexr
 */
-var Ver = "v0.9.0"
+var Ver = "v0.9.1"
 
 func main() {
 	o := Parse()

@@ -49,3 +49,26 @@ func TestShouldExcludeAs4k1080Pair(t *testing.T) {
 		t.Fatalf("did not expect exclusion under 'plex' policy")
 	}
 }
+
+func TestShouldExcludeAs4kHdPair_Mislabeled720(t *testing.T) {
+	item := Item{
+		Versions: []Version{
+			{Width: 3840, Height: 1600, VideoResolution: "4k"},
+			{Width: 720, Height: 388, VideoResolution: "sd"}, // mislabel
+		},
+	}
+	if !shouldExcludeAs4kHdPair(item, "ignore-4k-1080") {
+		t.Fatalf("expected true for 4k + sd(720x388) pair")
+	}
+
+	// But 4k + 720x480 should NOT be treated as HD-ish
+	itemBad := Item{
+		Versions: []Version{
+			{Width: 3840, Height: 1600, VideoResolution: "4k"},
+			{Width: 720, Height: 480, VideoResolution: "sd"},
+		},
+	}
+	if shouldExcludeAs4kHdPair(itemBad, "ignore-4k-1080") {
+		t.Fatalf("expected false for 4k + sd(720x480)")
+	}
+}
