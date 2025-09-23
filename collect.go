@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"strings"
+	"unicode"
 )
 
-func Run(ctx context.Context, pc *Client, o Options) (Output, error) {
-
+// Run performs the main collection logic and returns the results.
+func RunCollection(ctx context.Context, pc *Client, o Options) (Output, error) {
+	// --- discover sections ---
 	var (
 		sections []Directory
 		err      error
@@ -34,7 +36,7 @@ func Run(ctx context.Context, pc *Client, o Options) (Output, error) {
 		}
 	}
 
-	// Prepare output
+	// --- collect and summarize ---
 	out := Output{
 		Server: pc.BaseURL(),
 	}
@@ -50,7 +52,7 @@ func Run(ctx context.Context, pc *Client, o Options) (Output, error) {
 	for _, sec := range sections {
 		vids, err := pc.FetchDuplicatesForSection(ctx, sec.Key)
 		if err != nil {
-
+			// Skip this library on error; continue with others
 			continue
 		}
 
@@ -66,7 +68,7 @@ func Run(ctx context.Context, pc *Client, o Options) (Output, error) {
 		secVariantsExcluded := 0
 
 		for _, v := range vids {
-			// Fetch deeply if requested (to get full media/part details)
+			// deep fetch for parts and verification flags (if enabled)
 			var vv *Video
 			if o.Deep {
 				vv, err = pc.DeepFetchItem(ctx, v.RatingKey, o.Verify)
@@ -98,7 +100,14 @@ func Run(ctx context.Context, pc *Client, o Options) (Output, error) {
 					Height:          m.Height,
 				}
 
+				// build parts first, and detect if this entire version is in an Extras folder
+				versionGhosts := 0
+				versionIsExtra := false
 				for _, p := range m.Part {
+					if o.IgnoreExtras && isExtraPath(p.File) {
+						versionIsExtra = true
+					}
+
 					exists := p.ExistsInt == 1
 					accessible := p.AccessibleInt == 1
 					verified := exists && accessible
@@ -114,14 +123,39 @@ func Run(ctx context.Context, pc *Client, o Options) (Output, error) {
 					})
 
 					if o.Verify && !verified {
-						itemGhosts++
+						versionGhosts++
 					}
 				}
 
+				// If ignoring extras and this version lives under Extras/Featurettes store it and skip it
+				if o.IgnoreExtras && versionIsExtra {
+					// Record this dropped version as an ignored Extra
+					ignored = append(ignored, IgnoredItem{
+						SectionID:    sec.Key,
+						SectionTitle: sec.Title,
+						Reason:       "extra_version",
+						Item: Item{
+							RatingKey: vv.RatingKey,
+							Title:     fallback(vv.Title, v.Title),
+							Year:      vv.Year,
+							Guid:      vv.Guid,
+							Versions:  []Version{ver},
+						},
+					})
+					continue // skip adding this version to the item
+				}
+
+				itemGhosts += versionGhosts
 				item.Versions = append(item.Versions, ver)
 			}
 
-			// Ignore Exact 4K+1080 pair (and only that case)
+			// If extras filtering left fewer than 2 versions, it's no longer a duplicate.
+			if len(item.Versions) < 2 {
+				secVariantsExcluded++
+				continue
+			}
+
+			// Ignore EXACT 4K+1080 pair (only that case)
 			if shouldExcludeAs4k1080Pair(item, o.DupPolicy) {
 				secVariantsExcluded++
 				ignored = append(ignored, IgnoredItem{
@@ -133,6 +167,7 @@ func Run(ctx context.Context, pc *Client, o Options) (Output, error) {
 				continue
 			}
 
+			// Count only kept items
 			secTotalVersions += len(item.Versions)
 			if itemGhosts > 0 {
 				secItemsWithGhosts++
@@ -187,7 +222,7 @@ func (*noSectionsErr) Error() string { return "no movie/show sections found" }
 // Only exclude when exactly one 4K and one 1080p version exist (no others).
 func shouldExcludeAs4k1080Pair(it Item, policy string) bool {
 	if strings.ToLower(policy) != "ignore-4k-1080" {
-		return false
+		return false // "plex" behavior: keep all multi-version items
 	}
 
 	counts := map[string]int{}
@@ -201,6 +236,8 @@ func shouldExcludeAs4k1080Pair(it Item, policy string) bool {
 	return total == 2 && counts["2160"] == 1 && counts["1080"] == 1
 }
 
+// Normalize resolution label to a key we can compare.
+// (Make sure this matches 4K short-side tweak of 1580 to account for cinemascope aspect ratios etc)
 func normalizeResKey(v Version) string {
 	r := strings.ToLower(strings.TrimSpace(v.VideoResolution))
 	switch {
@@ -214,6 +251,7 @@ func normalizeResKey(v Version) string {
 		return "480"
 	}
 
+	// Fallback by dimensions (long/short side)
 	w, h := v.Width, v.Height
 	if w < h {
 		w, h = h, w
@@ -240,6 +278,111 @@ func normalizeResKey(v Version) string {
 	}
 }
 
+// Known Extra folder names (case-insensitive, per path segment)
+// Plex standard:  https://support.plex.tv/articles/local-files-for-trailers-and-extras/
+var extraDirNames = map[string]struct{}{
+	"extras": {}, "featurettes": {}, "interviews": {}, "shorts": {}, "deleted": {},
+	"deleted scenes": {}, "trailers": {}, "behind the scenes": {}, "other": {}, "scenes": {},
+}
+
+// Allowed Plex standardized tokens for filename suffix (case-insensitive)
+// Plex standard:  https://support.plex.tv/articles/local-files-for-trailers-and-extras/
+var extraTokens = map[string]struct{}{
+	"behindthescenes": {}, "deleted": {}, "featurette": {}, "deletedscene": {}, "interviews": {},
+	"interview": {}, "scene": {}, "short": {}, "trailer": {}, "other": {}, "deletedscenes": {},
+}
+
+// isExtraPath returns true if the path is inside an Extras-like folder OR
+// the basename ends with a standardized Plex suffix (with/without extension).
+func isExtraPath(p string) bool {
+	if p == "" {
+		return false
+	}
+	// Normalize separators to forward slashes
+	s := strings.ReplaceAll(p, "\\", "/")
+	parts := strings.Split(s, "/")
+	if len(parts) == 0 {
+		return false
+	}
+
+	// Folder-based detection on parent dirs
+	for _, seg := range parts[:len(parts)-1] {
+		seg = strings.TrimSpace(strings.ToLower(seg))
+		if seg == "" {
+			continue
+		}
+		if _, ok := extraDirNames[seg]; ok {
+			return true
+		}
+	}
+
+	// Filename-based detection (hyphen-suffix token), with or without extension
+	base := parts[len(parts)-1] // keep extension; we handle both cases below
+	return isExtraBasename(base)
+}
+
+// isExtraBasename checks only the basename (may include extension).
+// Matches “…-token” or “…-token-<digits>” (also _, ., or space before digits), case-insensitive.
+func isExtraBasename(name string) bool {
+	if name == "" {
+		return false
+	}
+
+	// Strip extension if present (optional; we accept with or without)
+	if dot := strings.LastIndexByte(name, '.'); dot > 0 {
+		name = name[:dot]
+	}
+
+	name = strings.TrimSpace(name)
+	// Must have a hyphen introducing the token
+	idx := strings.LastIndexByte(name, '-')
+	if idx == -1 || idx == len(name)-1 {
+		return false
+	}
+
+	suffix := strings.ToLower(strings.TrimSpace(name[idx+1:]))
+	if suffix == "" {
+		return false
+	}
+
+	// Exact token match
+	if _, ok := extraTokens[suffix]; ok {
+		return true
+	}
+
+	// Token followed by one separator and digits
+	for tok := range extraTokens {
+		if strings.HasPrefix(suffix, tok) {
+			rest := strings.TrimSpace(suffix[len(tok):])
+			if rest == "" {
+				return true
+			}
+			// one leading separator then digits (e.g., -trailer-2, -trailer_01, -trailer 3, -trailer.4)
+			if len(rest) >= 2 && (rest[0] == '-' || rest[0] == '_' || rest[0] == '.' || rest[0] == ' ') {
+				digits := strings.TrimSpace(rest[1:])
+				if allDigits(digits) {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// allDigits returns true if s is non-empty and consists only of digit runes.
+func allDigits(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		if !unicode.IsDigit(r) {
+			return false
+		}
+	}
+	return true
+}
+
+// fallback returns a if it's not the zero value, otherwise b.
 func fallback[T comparable](a, b T) T {
 	var zero T
 	if a != zero {

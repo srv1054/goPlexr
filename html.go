@@ -9,16 +9,18 @@ import (
 )
 
 // RenderHTML writes a standalone HTML report (no external assets).
-func RenderHTML(out Output, verify bool, filename string) error {
+func RenderHTML(out Output, verify bool, ignoreExtras bool, filename string) error {
 	type pageData struct {
-		Out       Output
-		Verify    bool
-		Generated string
+		Out          Output
+		Verify       bool
+		IgnoreExtras bool
+		Generated    string
 	}
 	data := pageData{
-		Out:       out,
-		Verify:    verify,
-		Generated: time.Now().Format("2006-01-02 15:04:05 MST"),
+		Out:          out,
+		Verify:       verify,
+		IgnoreExtras: ignoreExtras,
+		Generated:    time.Now().Format("2006-01-02 15:04:05 MST"),
 	}
 
 	funcs := template.FuncMap{
@@ -56,6 +58,24 @@ func RenderHTML(out Output, verify bool, filename string) error {
 			default:
 				return "Policy: Plex (all multi-version)"
 			}
+		},
+		"filterIgnoredBy": func(items []IgnoredItem, reason string) []IgnoredItem {
+			out := make([]IgnoredItem, 0, len(items))
+			for _, it := range items {
+				if strings.EqualFold(it.Reason, reason) {
+					out = append(out, it)
+				}
+			}
+			return out
+		},
+		"lenIgnoredBy": func(items []IgnoredItem, reason string) int {
+			n := 0
+			for _, it := range items {
+				if strings.EqualFold(it.Reason, reason) {
+					n++
+				}
+			}
+			return n
 		},
 	}
 
@@ -123,6 +143,7 @@ hr{border:none;height:1px;background:var(--border);margin:20px 0}
         <span class="chip warn">Verification: Off (ghost counts not checked)</span>
       {{ end }}
       <span class="chip">{{ policyName .Out.Summary.DuplicatePolicy }}</span>
+      <span class="chip">{{ if .IgnoreExtras }}Extras: Ignored ({{ lenIgnoredBy .Out.Ignored "extra_version" }}){{ else }}Extras: Included{{ end }}</span>
     </div>
   </header>
 
@@ -178,7 +199,7 @@ hr{border:none;height:1px;background:var(--border);margin:20px 0}
             {{ else }}<span class="badge warn">verification off</span>{{ end }}
           </summary>
           <table>
-            <thead><tr><th>Version</th><th>Codec</th><th>Resolution</th><th>Part File</th><th>Size</th><th>Status</th></tr></thead>
+            <thead><tr><th>Version</th><th>Codec</</th><th>Resolution</th><th>Part File</th><th>Size</th><th>Status</th></tr></thead>
             <tbody>
               {{ range $v := $it.Versions }}
                 {{ range $p := $v.Parts }}
@@ -204,18 +225,59 @@ hr{border:none;height:1px;background:var(--border);margin:20px 0}
     {{ end }}
   </section>
 
-  {{ if gt (len .Out.Ignored) 0 }}
+  {{ if gt (len (filterIgnoredBy .Out.Ignored "4k+1080_pair")) 0 }}
   <section class="details" style="margin-top:22px">
     <h2>Ignored (4K+1080 Pairs)</h2>
     <div class="muted small" style="margin-bottom:8px">
       The items below were not counted as duplicates because they contain exactly one 4K (≈2160p) and one 1080p version, with no other versions.
     </div>
-    {{ range $ig := .Out.Ignored }}
+    {{ $pairs := filterIgnoredBy .Out.Ignored "4k+1080_pair" }}
+    {{ range $ig := $pairs }}
     <details>
       <summary>
         {{ $ig.Item.Title }}{{ if $ig.Item.Year }} ({{ $ig.Item.Year }}){{ end }}
         <span class="badge">{{ $ig.SectionTitle }}</span>
         <span class="badge ok">Reason: 4K+1080 pair</span>
+      </summary>
+      <table>
+        <thead><tr><th>Version</th><th>Codec</th><th>Resolution</th><th>Part File</th><th>Size</th><th>Status</th></tr></thead>
+        <tbody>
+          {{ range $v := $ig.Item.Versions }}
+            {{ range $p := $v.Parts }}
+            <tr>
+              <td><code>{{ $v.Container }}</code></td>
+              <td><span class="muted">{{ $v.VideoCodec }}</span> / <span class="muted">{{ $v.AudioCodec }}</span></td>
+              <td>{{ $v.VideoResolution }} ({{ $v.Width }}×{{ $v.Height }})</td>
+              <td><code>{{ $p.File }}</code></td>
+              <td>{{ bytesHuman $p.Size }}</td>
+              <td>
+                {{ if $.Verify }}
+                  {{ if $p.VerifiedOnDisk }}<span class="chip ok">Verified</span>{{ else }}<span class="chip bad">Missing/Unreachable</span>{{ end }}
+                {{ else }}<span class="chip warn">Not checked</span>{{ end }}
+              </td>
+            </tr>
+            {{ end }}
+          {{ end }}
+        </tbody>
+      </table>
+    </details>
+    {{ end }}
+  </section>
+  {{ end }}
+
+  {{ if and .IgnoreExtras (gt (len (filterIgnoredBy .Out.Ignored "extra_version")) 0) }}
+  <section class="details" style="margin-top:22px">
+    <h2>Ignored Extras</h2>
+    <div class="muted small" style="margin-bottom:8px">
+      The versions below were ignored because <strong>--ignore-extras</strong> was enabled and their filename/folder matched Plex’s Extras conventions.
+    </div>
+    {{ $extras := filterIgnoredBy .Out.Ignored "extra_version" }}
+    {{ range $ig := $extras }}
+    <details>
+      <summary>
+        {{ $ig.Item.Title }}{{ if $ig.Item.Year }} ({{ $ig.Item.Year }}){{ end }}
+        <span class="badge">{{ $ig.SectionTitle }}</span>
+        <span class="badge ok">Reason: Extra</span>
       </summary>
       <table>
         <thead><tr><th>Version</th><th>Codec</th><th>Resolution</th><th>Part File</th><th>Size</th><th>Status</th></tr></thead>
