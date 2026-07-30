@@ -199,7 +199,7 @@ hr{border:none;height:1px;background:var(--border);margin:20px 0}
             {{ else }}<span class="badge warn">verification off</span>{{ end }}
           </summary>
           <table>
-            <thead><tr><th>Version</th><th>Codec</</th><th>Resolution</th><th>Part File</th><th>Size</th><th>Status</th></tr></thead>
+            <thead><tr><th>Version</th><th>Codec</th><th>Resolution</th><th>Part File</th><th>Size</th><th>Status</th></tr></thead>
             <tbody>
               {{ range $v := $it.Versions }}
                 {{ range $p := $v.Parts }}
