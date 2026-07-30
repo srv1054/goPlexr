@@ -43,13 +43,13 @@ This repository is written in Go. Build a static binary (or for your platform) w
 From the repository root:
 
 ```bash
-go build -o goplexr ./cmd/goPlexr
+go build -o goplexr .
 ```
 
 Optionally set a version at build time (embedded into the binary):
 
 ```bash
-go build -ldflags "-X main.Version=v0.3.0" -o goplexr ./cmd/goPlexr
+go build -ldflags "-X main.Ver=v0.9.1" -o goplexr .
 ```
 
 Requirements:

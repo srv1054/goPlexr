@@ -10,7 +10,7 @@ import (
 /*
 	Ver is the CLI version. Override at build time with:
 
-go build -ldflags "-X Ver=v0.3.0" ./cmd/goPlexr
+go build -ldflags "-X main.Ver=v0.9.1" .
 */
 var Ver = "v0.9.1"
 
