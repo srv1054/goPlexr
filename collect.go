@@ -52,7 +52,16 @@ func RunCollection(ctx context.Context, pc *Client, o Options) (Output, error) {
 	for _, sec := range sections {
 		vids, err := pc.FetchDuplicatesForSection(ctx, sec.Key)
 		if err != nil {
-			// Skip this library on error; continue with others
+			message := err.Error()
+			if pc.token != "" {
+				message = strings.ReplaceAll(message, pc.token, "[REDACTED]")
+			}
+			out.Warnings = append(out.Warnings, ReportWarning{
+				Code:         "section_fetch_failed",
+				SectionID:    sec.Key,
+				SectionTitle: sec.Title,
+				Message:      message,
+			})
 			continue
 		}
 

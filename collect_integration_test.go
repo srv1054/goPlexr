@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -105,5 +106,58 @@ func TestCollectRun_WithMockPlex(t *testing.T) {
 	// verify summary flags
 	if out.Summary.DuplicatePolicy != "ignore-4k-1080" {
 		t.Fatalf("expected duplicate policy to be preserved in summary")
+	}
+}
+
+func TestCollectRun_RecordsSectionFetchWarningAndContinues(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/library/sections", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/xml")
+		_, _ = w.Write([]byte(`<?xml version="1.0"?>
+<MediaContainer>
+  <Directory key="1" type="movie" title="Unavailable Movies" />
+  <Directory key="2" type="movie" title="Available Movies" />
+</MediaContainer>`))
+	})
+	mux.HandleFunc("/library/sections/1/all", func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "temporarily unavailable", http.StatusServiceUnavailable)
+	})
+	mux.HandleFunc("/library/sections/2/all", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/xml")
+		_, _ = w.Write([]byte(`<?xml version="1.0"?><MediaContainer></MediaContainer>`))
+	})
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	o := Options{
+		BaseURL:   ts.URL,
+		Token:     "fake",
+		DupPolicy: "plex",
+		Timeout:   5 * time.Second,
+	}
+	pc, err := NewClient(o)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	out, err := RunCollection(context.Background(), pc, o)
+	if err != nil {
+		t.Fatalf("RunCollection: %v", err)
+	}
+	if len(out.Sections) != 1 || out.Sections[0].SectionID != "2" {
+		t.Fatalf("expected section 2 to be scanned after section 1 failed; got %#v", out.Sections)
+	}
+	if len(out.Warnings) != 1 {
+		t.Fatalf("expected one warning, got %d", len(out.Warnings))
+	}
+	warning := out.Warnings[0]
+	if warning.Code != "section_fetch_failed" ||
+		warning.SectionID != "1" ||
+		warning.SectionTitle != "Unavailable Movies" {
+		t.Fatalf("unexpected warning: %#v", warning)
+	}
+	if !strings.Contains(warning.Message, "plex http 503") {
+		t.Fatalf("expected HTTP failure in warning message, got %q", warning.Message)
 	}
 }

@@ -38,6 +38,16 @@ func main() {
 		fmt.Fprintln(os.Stderr, "FATAL:", err)
 		os.Exit(1)
 	}
+	for _, warning := range out.Warnings {
+		fmt.Fprintf(
+			os.Stderr,
+			"WARN: %s for section %q (%s): %s\n",
+			warning.Code,
+			warning.SectionTitle,
+			warning.SectionID,
+			warning.Message,
+		)
+	}
 
 	// JSON to stdout
 	if o.JSONOut != "" {

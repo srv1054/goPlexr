@@ -9,6 +9,7 @@ type Output struct {
 	TotalGhosts   int             `json:"total_ghost_parts"`
 	Summary       Summary         `json:"summary"`
 	Ignored       []IgnoredItem   `json:"ignored,omitempty"`
+	Warnings      []ReportWarning `json:"warnings,omitempty"`
 }
 
 // Result for a single library/section
@@ -81,4 +82,12 @@ type IgnoredItem struct {
 	SectionTitle string `json:"section_title"`
 	Reason       string `json:"reason"` // e.g. "4k+hd_pair"
 	Item         Item   `json:"item"`
+}
+
+// ReportWarning describes a recoverable problem that may make a report incomplete.
+type ReportWarning struct {
+	Code         string `json:"code"`
+	SectionID    string `json:"section_id,omitempty"`
+	SectionTitle string `json:"section_title,omitempty"`
+	Message      string `json:"message"`
 }
