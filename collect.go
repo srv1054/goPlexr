@@ -50,9 +50,24 @@ func RunCollection(ctx context.Context, pc *Client, o Options) (Output, error) {
 	var libSummaries []LibrarySummary
 
 	for _, sec := range sections {
+		if err := ctx.Err(); err != nil {
+			return Output{}, err
+		}
 		vids, err := pc.FetchDuplicatesForSection(ctx, sec.Key)
 		if err != nil {
-			// Skip this library on error; continue with others
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return Output{}, ctxErr
+			}
+			message := err.Error()
+			if pc.token != "" {
+				message = strings.ReplaceAll(message, pc.token, "[REDACTED]")
+			}
+			out.Warnings = append(out.Warnings, ReportWarning{
+				Code:         "section_fetch_failed",
+				SectionID:    sec.Key,
+				SectionTitle: sec.Title,
+				Message:      message,
+			})
 			continue
 		}
 
@@ -68,11 +83,17 @@ func RunCollection(ctx context.Context, pc *Client, o Options) (Output, error) {
 		secVariantsExcluded := 0
 
 		for _, v := range vids {
+			if err := ctx.Err(); err != nil {
+				return Output{}, err
+			}
 			// deep fetch for parts and verification flags (if enabled)
 			var vv *Video
 			if o.Deep {
 				vv, err = pc.DeepFetchItem(ctx, v.RatingKey, o.Verify)
 				if err != nil {
+					if ctxErr := ctx.Err(); ctxErr != nil {
+						return Output{}, ctxErr
+					}
 					vv = &v
 				}
 			} else {

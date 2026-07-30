@@ -144,8 +144,22 @@ hr{border:none;height:1px;background:var(--border);margin:20px 0}
       {{ end }}
       <span class="chip">{{ policyName .Out.Summary.DuplicatePolicy }}</span>
       <span class="chip">{{ if .IgnoreExtras }}Extras: Ignored ({{ lenIgnoredBy .Out.Ignored "extra_version" }}){{ else }}Extras: Included{{ end }}</span>
+      {{ if gt (len .Out.Warnings) 0 }}<span class="chip warn">Warnings: {{ len .Out.Warnings }}</span>{{ end }}
     </div>
   </header>
+
+  {{ if gt (len .Out.Warnings) 0 }}
+  <section class="panel" style="margin-top:16px;border-color:var(--warn)">
+    <h2>Scan Warnings</h2>
+    <div class="muted">The report may be incomplete because some libraries could not be scanned.</div>
+    {{ range .Out.Warnings }}
+    <div style="margin-top:10px">
+      <span class="badge warn">{{ .Code }}</span>
+      Section <strong>{{ .SectionTitle }}</strong> (<code>{{ .SectionID }}</code>): {{ .Message }}
+    </div>
+    {{ end }}
+  </section>
+  {{ end }}
 
   <section class="panel" style="margin-top:16px">
     <h2>Summary</h2>
@@ -199,7 +213,7 @@ hr{border:none;height:1px;background:var(--border);margin:20px 0}
             {{ else }}<span class="badge warn">verification off</span>{{ end }}
           </summary>
           <table>
-            <thead><tr><th>Version</th><th>Codec</</th><th>Resolution</th><th>Part File</th><th>Size</th><th>Status</th></tr></thead>
+            <thead><tr><th>Version</th><th>Codec</th><th>Resolution</th><th>Part File</th><th>Size</th><th>Status</th></tr></thead>
             <tbody>
               {{ range $v := $it.Versions }}
                 {{ range $p := $v.Parts }}

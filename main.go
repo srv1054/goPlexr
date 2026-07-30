@@ -3,14 +3,16 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 )
 
 /*
 	Ver is the CLI version. Override at build time with:
 
-go build -ldflags "-X Ver=v0.3.0" ./cmd/goPlexr
+go build -ldflags "-X main.Ver=v0.9.1" .
 */
 var Ver = "v0.9.1"
 
@@ -25,7 +27,6 @@ func main() {
 	}
 
 	// Basic validation
-	ctx := context.Background()
 	pc, err := NewClient(o)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "FATAL:", err)
@@ -33,10 +34,26 @@ func main() {
 	}
 
 	// Collect duplicates
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 	out, err := RunCollection(ctx, pc, o)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			fmt.Fprintln(os.Stderr, "CANCELED: scan interrupted")
+			os.Exit(130)
+		}
 		fmt.Fprintln(os.Stderr, "FATAL:", err)
 		os.Exit(1)
+	}
+	for _, warning := range out.Warnings {
+		fmt.Fprintf(
+			os.Stderr,
+			"WARN: %s for section %q (%s): %s\n",
+			warning.Code,
+			warning.SectionTitle,
+			warning.SectionID,
+			warning.Message,
+		)
 	}
 
 	// JSON to stdout
