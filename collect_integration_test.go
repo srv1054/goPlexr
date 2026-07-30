@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -159,5 +160,50 @@ func TestCollectRun_RecordsSectionFetchWarningAndContinues(t *testing.T) {
 	}
 	if !strings.Contains(warning.Message, "plex http 503") {
 		t.Fatalf("expected HTTP failure in warning message, got %q", warning.Message)
+	}
+}
+
+func TestCollectRun_CancellationStopsScan(t *testing.T) {
+	requestStarted := make(chan struct{})
+	mux := http.NewServeMux()
+	mux.HandleFunc("/library/sections", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/xml")
+		_, _ = w.Write([]byte(`<?xml version="1.0"?>
+<MediaContainer>
+  <Directory key="1" type="movie" title="Movies" />
+</MediaContainer>`))
+	})
+	mux.HandleFunc("/library/sections/1/all", func(w http.ResponseWriter, r *http.Request) {
+		close(requestStarted)
+		<-r.Context().Done()
+	})
+
+	ts := httptest.NewServer(mux)
+	defer ts.Close()
+
+	o := Options{
+		BaseURL:   ts.URL,
+		Token:     "fake",
+		DupPolicy: "plex",
+		Timeout:   5 * time.Second,
+	}
+	pc, err := NewClient(o)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		<-requestStarted
+		cancel()
+	}()
+
+	out, err := RunCollection(ctx, pc, o)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context cancellation, got %v", err)
+	}
+	if len(out.Warnings) != 0 {
+		t.Fatalf("cancellation should not be recorded as a recoverable warning: %#v", out.Warnings)
 	}
 }

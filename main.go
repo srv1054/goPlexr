@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 )
 
 /*
@@ -25,7 +27,6 @@ func main() {
 	}
 
 	// Basic validation
-	ctx := context.Background()
 	pc, err := NewClient(o)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "FATAL:", err)
@@ -33,8 +34,14 @@ func main() {
 	}
 
 	// Collect duplicates
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
 	out, err := RunCollection(ctx, pc, o)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			fmt.Fprintln(os.Stderr, "CANCELED: scan interrupted")
+			os.Exit(130)
+		}
 		fmt.Fprintln(os.Stderr, "FATAL:", err)
 		os.Exit(1)
 	}
