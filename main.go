@@ -14,7 +14,7 @@ import (
 
 go build -ldflags "-X main.Ver=v0.9.1" .
 */
-var Ver = "v0.9.1"
+var Ver = "v0.9.2"
 
 func main() {
 	o := Parse()
