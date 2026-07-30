@@ -46,7 +46,7 @@ func TestRenderHTML_IgnoredSectionsAppear(t *testing.T) {
 			{
 				SectionID:    "1",
 				SectionTitle: "Movies",
-				Reason:       "4k+1080_pair",
+				Reason:       "4k+hd_pair",
 				Item: Item{
 					Title: "Bar",
 					Year:  2019,
@@ -83,8 +83,8 @@ func TestRenderHTML_IgnoredSectionsAppear(t *testing.T) {
 	if !strings.Contains(s1, "Ignored Extras") {
 		t.Errorf("expected 'Ignored Extras' section when ignoreExtras is true")
 	}
-	if !strings.Contains(s1, "Ignored (4K+1080 Pairs)") {
-		t.Errorf("expected 'Ignored (4K+1080 Pairs)' section to be present")
+	if !strings.Contains(s1, "Ignored (4K+HD Pairs)") {
+		t.Errorf("expected 'Ignored (4K+HD Pairs)' section to be present")
 	}
 
 	// When ignoreExtras=false, the extras section should be hidden

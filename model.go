@@ -75,10 +75,10 @@ type LibrarySummary struct {
 	VariantsExcluded int    `json:"variants_excluded,omitempty"`
 }
 
-// Optional list of items excluded by policy (e.g., 4K+1080 pairs)
+// Optional list of items excluded by policy (e.g., 4K+HD pairs)
 type IgnoredItem struct {
 	SectionID    string `json:"section_id"`
 	SectionTitle string `json:"section_title"`
-	Reason       string `json:"reason"` // e.g. "4k+1080_pair"
+	Reason       string `json:"reason"` // e.g. "4k+hd_pair"
 	Item         Item   `json:"item"`
 }
